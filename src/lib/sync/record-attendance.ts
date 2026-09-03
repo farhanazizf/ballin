@@ -32,7 +32,15 @@ export async function markAttendanceLocal(input: MarkAttendanceInput) {
     await enqueue({
       clientEventId: crypto.randomUUID(),
       table: 'attendance',
-      payload: row,
+      payload: {
+        sessionId: input.sessionId,
+        playerId: input.playerId,
+        sessionDate: input.sessionDate,
+        status: input.status,
+        method: input.method,
+        checkedInAt,
+        recordedBy: input.recordedBy,
+      },
     });
   });
 

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getSessionById } from '@/lib/queries/sessions';
+import { getSessionDate } from '@/lib/attendance/session-date';
 import { AttendanceClient } from './attendance-client';
 
 type Props = { params: Promise<{ id: string }> };
@@ -17,7 +18,7 @@ export default async function AttendancePage({ params }: Props) {
   const session = await getSessionById(supabase, id);
   if (!session) redirect('/sessions');
 
-  const sessionDate = new Date(session.scheduledStart).toISOString().slice(0, 10);
+  const sessionDate = getSessionDate(session.scheduledStart);
 
   return (
     <AttendanceClient
