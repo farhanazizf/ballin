@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { SignOut } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -14,14 +15,13 @@ export default function PlayerLayout({
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <header className="relative z-20 flex items-center justify-between px-4 h-14 shrink-0">
-        <span
-          className={cn(
-            'font-[family-name:var(--font-display)] text-base font-bold tracking-tight',
-            'text-[var(--color-field-text)] opacity-60',
-          )}
-        >
-          Ballin
-        </span>
+        <Image
+          src="/logo-icon.svg"
+          alt="Ballin"
+          width={28}
+          height={28}
+          priority
+        />
         <button
           className={cn(
             'flex items-center justify-center w-10 h-10',

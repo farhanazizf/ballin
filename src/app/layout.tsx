@@ -19,6 +19,10 @@ const instrumentSans = Instrument_Sans({
 export const metadata: Metadata = {
   title: "Ballin",
   description: "Pencatatan latihan akademi basket",
+  icons: {
+    icon: "/logo-icon.svg",
+    apple: "/logo-icon.svg",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
