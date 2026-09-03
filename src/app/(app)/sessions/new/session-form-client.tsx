@@ -10,7 +10,7 @@ import { sessionSchema, type SessionInput } from '@/lib/validators/session';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { CoachTeamOption } from '@/lib/queries/sessions';
+import type { TeamOption } from '@/lib/queries/sessions';
 
 type SessionFormValues = {
   teamId: string;
@@ -31,7 +31,7 @@ function defaultLocalDateTime(): string {
   return local.toISOString().slice(0, 16);
 }
 
-export function SessionFormClient({ teams }: { teams: CoachTeamOption[] }) {
+export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

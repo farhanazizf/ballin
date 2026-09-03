@@ -1,6 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
 
-// Types for local storage
 export interface LocalSession {
   id: string;
   teamId: string;
@@ -67,6 +66,17 @@ export interface LocalDrillEvent {
   voidedAt?: string;
 }
 
+export interface LocalAttendance {
+  key: string;
+  sessionId: string;
+  playerId: string;
+  sessionDate: string;
+  status: 'present' | 'late' | 'excused' | 'sick' | 'absent';
+  method: string;
+  checkedInAt: string;
+  recordedBy: string;
+}
+
 export interface OutboxItem {
   seq?: number;
   clientEventId: string;
@@ -86,11 +96,12 @@ class BallinDB extends Dexie {
   drills!: EntityTable<LocalDrill, 'id'>;
   sessionDrills!: EntityTable<LocalSessionDrill, 'id'>;
   localEvents!: EntityTable<LocalDrillEvent, 'clientEventId'>;
+  localAttendance!: EntityTable<LocalAttendance, 'key'>;
   outbox!: EntityTable<OutboxItem, 'seq'>;
 
   constructor() {
     super('ballin');
-    
+
     this.version(1).stores({
       sessions: 'id, teamId, status',
       players: 'id, *teamIds',
@@ -99,6 +110,10 @@ class BallinDB extends Dexie {
       sessionDrills: 'id, sessionId',
       localEvents: 'clientEventId, sessionDrillId, playerId',
       outbox: '++seq, clientEventId, status, createdAt',
+    });
+
+    this.version(2).stores({
+      localAttendance: 'key, sessionId, playerId',
     });
   }
 }

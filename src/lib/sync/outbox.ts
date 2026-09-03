@@ -82,18 +82,51 @@ async function sendBatch(items: OutboxItem[]): Promise<{ ok: boolean; status: nu
       recordedBy: string;
     });
 
-  if (drillEvents.length === 0) {
+  const attendanceRecords = items
+    .filter((item) => item.table === 'attendance')
+    .map((item) => item.payload as {
+      sessionId: string;
+      playerId: string;
+      sessionDate: string;
+      status: 'present' | 'late' | 'excused' | 'sick' | 'absent';
+      method: 'qr' | 'manual' | 'auto' | 'kiosk';
+      checkedInAt: string;
+      recordedBy: string;
+    });
+
+  if (drillEvents.length === 0 && attendanceRecords.length === 0) {
     return { ok: true, status: 200 };
   }
 
-  const res = await fetch('/api/sync/events', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ events: drillEvents }),
-  });
+  const requests: Promise<Response>[] = [];
 
-  return { ok: res.ok, status: res.status };
+  if (drillEvents.length > 0) {
+    requests.push(
+      fetch('/api/sync/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ events: drillEvents }),
+      }),
+    );
+  }
+
+  if (attendanceRecords.length > 0) {
+    requests.push(
+      fetch('/api/sync/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ records: attendanceRecords }),
+      }),
+    );
+  }
+
+  const responses = await Promise.all(requests);
+  const ok = responses.every((res) => res.ok);
+  const status = responses.find((res) => !res.ok)?.status ?? 200;
+
+  return { ok, status };
 }
 
 export async function getOutboxStatus() {

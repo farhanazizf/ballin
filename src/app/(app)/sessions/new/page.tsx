@@ -1,7 +1,8 @@
 import { UserCircle } from '@phosphor-icons/react/dist/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getCoachTeamsForSession } from '@/lib/queries/sessions';
+import { getCoachTeamIds } from '@/lib/queries/dashboard';
+import { getTeamsForCoach } from '@/lib/queries/sessions';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SessionFormClient } from './session-form-client';
 
@@ -22,7 +23,7 @@ export default async function NewSessionPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organization_id, role')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -35,10 +36,13 @@ export default async function NewSessionPage() {
     );
   }
 
-  const teams = await getCoachTeamsForSession(
+  const teamIds =
+    profile.role === 'admin' ? [] : await getCoachTeamIds(supabase, user.id);
+
+  const teams = await getTeamsForCoach(
     supabase,
     profile.organization_id,
-    user.id,
+    teamIds,
   );
 
   if (teams.length === 0) {
