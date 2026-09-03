@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { SignOut } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +10,15 @@ export default function PlayerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/player-login');
+  }
+
   return (
     <div
       className={cn('field-theme min-h-[100dvh] flex flex-col')}
@@ -23,6 +33,8 @@ export default function PlayerLayout({
           priority
         />
         <button
+          type="button"
+          onClick={handleSignOut}
           className={cn(
             'flex items-center justify-center w-10 h-10',
             'rounded-[var(--radius-panel)]',
