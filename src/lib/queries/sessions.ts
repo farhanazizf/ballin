@@ -1,11 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { sessionSchema, type SessionInput } from '@/lib/validators/session';
+import { getCoachTeamIds } from '@/lib/queries/dashboard';
+
+export type SessionStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
 
 export type SessionListItem = {
   id: string;
   scheduledStart: string;
   scheduledEnd: string | null;
   location: string | null;
-  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  status: SessionStatus;
   sessionType: string;
   teamName: string;
   teamId: string;
@@ -18,6 +22,126 @@ export type TeamOption = {
   name: string;
   trackDrillStats: boolean;
 };
+
+export type SessionDateGroup = {
+  dateKey: string;
+  dateLabel: string;
+  sessions: SessionListItem[];
+};
+
+const WIB_TIMEZONE = 'Asia/Jakarta';
+
+export function getDateKeyWib(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: WIB_TIMEZONE }).format(
+    new Date(iso),
+  );
+}
+
+export function formatDateGroupLabel(dateKey: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
+
+export function formatSessionTime(iso: string): string {
+  return new Intl.DateTimeFormat('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: WIB_TIMEZONE,
+  }).format(new Date(iso));
+}
+
+export function sessionStatusLabel(status: SessionStatus): string {
+  switch (status) {
+    case 'active':
+      return 'Sedang berlangsung';
+    case 'scheduled':
+      return 'Belum dimulai';
+    case 'completed':
+      return 'Selesai';
+    case 'cancelled':
+      return 'Dibatalkan';
+  }
+}
+
+export function groupSessionsByDate(sessions: SessionListItem[]): SessionDateGroup[] {
+  const groups = new Map<string, SessionListItem[]>();
+
+  for (const session of sessions) {
+    const dateKey = getDateKeyWib(session.scheduledStart);
+    const existing = groups.get(dateKey) ?? [];
+    existing.push(session);
+    groups.set(dateKey, existing);
+  }
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([dateKey, dateSessions]) => ({
+      dateKey,
+      dateLabel: formatDateGroupLabel(dateKey),
+      sessions: dateSessions.sort(
+        (a, b) =>
+          new Date(b.scheduledStart).getTime() -
+          new Date(a.scheduledStart).getTime(),
+      ),
+    }));
+}
+
+export async function getSessionsForCoach(
+  supabase: SupabaseClient,
+  orgId: string,
+  coachId: string,
+): Promise<SessionListItem[]> {
+  const teamIds = await getCoachTeamIds(supabase, coachId);
+  if (teamIds.length === 0) return [];
+  return getSessionsList(supabase, orgId, teamIds);
+}
+
+export async function createSession(
+  supabase: SupabaseClient,
+  orgId: string,
+  coachId: string,
+  rawInput: SessionInput,
+): Promise<{ id: string } | { error: string }> {
+  const parsed = sessionSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { error: 'Data sesi tidak valid. Periksa kelas dan waktu mulai.' };
+  }
+
+  const input = parsed.data;
+  const teamIds = await getCoachTeamIds(supabase, coachId);
+  if (teamIds.length > 0 && !teamIds.includes(input.teamId)) {
+    return {
+      error: 'Kelas tidak ditemukan atau Anda belum ditugaskan ke kelas ini.',
+    };
+  }
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .insert({
+      organization_id: orgId,
+      team_id: input.teamId,
+      scheduled_start: input.scheduledStart,
+      scheduled_end: input.scheduledEnd ?? null,
+      location: input.location ?? null,
+      session_type: input.sessionType,
+      status: 'scheduled',
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    return { error: 'Gagal menyimpan sesi. Coba lagi dalam beberapa saat.' };
+  }
+
+  return { id: data.id };
+}
 
 export async function getTeamsForCoach(
   supabase: SupabaseClient,
