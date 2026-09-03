@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  /* Field (dark/court theme) */
+  --color-field-bg: #0D1520;
+  --color-field-surface: #15202E;
+  --color-field-raised: #1E2B3B;
+  --color-field-border: #2A3A4D;
+  --color-field-text: #F2F6FA;
+  --color-field-text-2: #9BAABC;
+  --color-field-text-3: #64768A;
+
+  /* Report (light theme) */
+  --color-report-bg: #EDF0F3;
+  --color-report-surface: #FFFFFF;
+  --color-report-border: #D6DDE4;
+  --color-report-text: #101A26;
+  --color-report-text-2: #4C5D70;
+  --color-report-text-3: #7C8CA0;
+
+  /* Action & meaning */
+  --color-leather: #EE6A1E;
+  --color-leather-deep: #C9540F;
+  --color-leather-tint: #FFE7D6;
+  --color-on-leather: #101A26;
+  --color-made: #17B26A;
+  --color-miss: #E5484D;
+  --color-gold: #F4B740;
+  --color-focus: #5AA9FF;
+
+  /* Academy slot */
+  --color-academy-primary: #EE6A1E;
+
+  /* Chart palette */
+  --color-chart-1: #EE6A1E;
+  --color-chart-2: #1FA9C4;
+  --color-chart-3: #7A5AF8;
+  --color-chart-4: #17B26A;
+  --color-chart-5: #F4B740;
+  --color-chart-6: #E5484D;
+
+  /* Typography */
+  --font-display: "Archivo", system-ui, sans-serif;
+  --font-ui: "Instrument Sans", system-ui, sans-serif;
+
+  /* Spacing (4px base) */
+  --spacing-sp-1: 4px;
+  --spacing-sp-2: 8px;
+  --spacing-sp-3: 12px;
+  --spacing-sp-4: 16px;
+  --spacing-sp-5: 24px;
+  --spacing-sp-6: 32px;
+  --spacing-sp-7: 48px;
+  --spacing-sp-8: 64px;
+
+  /* Border radius */
+  --radius-card: 14px;
+  --radius-button: 12px;
+  --radius-panel: 8px;
+  --radius-chip: 999px;
+
+  /* Touch targets */
+  --size-touch-min: 48px;
+  --size-touch-card: 80px;
+  --size-touch-primary: 88px;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .field-theme {
+    background-color: var(--color-field-bg);
+    color: var(--color-field-text);
+  }
+
+  .report-theme {
+    background-color: var(--color-report-bg);
+    color: var(--color-report-text);
+  }
+
+  /* Tabular numerals for all score displays */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Focus ring */
+  .focus-ring {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
