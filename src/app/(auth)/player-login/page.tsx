@@ -206,8 +206,8 @@ export default function PlayerLoginPage() {
     setServerError(null);
     startTransition(async () => {
       try {
-        await handlePlayerLogin(data);
-        router.push('/card');
+        const result = await handlePlayerLogin(data);
+        router.push(result.redirect ?? '/card');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Terjadi kesalahan. Coba lagi.';
         setServerError(msg);

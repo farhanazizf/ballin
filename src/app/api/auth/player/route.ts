@@ -1,6 +1,7 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { playerLoginSchema } from '@/lib/validators/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const RATE_LIMIT_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
@@ -18,14 +19,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { username, pin } = parsed.data;
+    const admin = createAdminClient();
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // Look up player credentials
-    const { data: cred, error: credError } = await supabase
+    const { data: cred, error: credError } = await admin
       .from('player_credentials')
       .select('player_id, pin_hash, failed_attempts, locked_until')
       .eq('username', username)
@@ -38,7 +34,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if locked
     if (cred.locked_until && new Date(cred.locked_until) > new Date()) {
       const minutesLeft = Math.ceil(
         (new Date(cred.locked_until).getTime() - Date.now()) / 60000
@@ -49,8 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify PIN using pgcrypto's crypt function
-    const { data: pinCheck } = await supabase.rpc('verify_player_pin', {
+    const { data: pinCheck } = await admin.rpc('verify_player_pin', {
       p_player_id: cred.player_id,
       p_pin: pin,
     });
@@ -65,10 +59,7 @@ export async function POST(request: NextRequest) {
         ).toISOString();
       }
 
-      await supabase
-        .from('player_credentials')
-        .update(updates)
-        .eq('player_id', cred.player_id);
+      await admin.from('player_credentials').update(updates).eq('player_id', cred.player_id);
 
       const remaining = RATE_LIMIT_ATTEMPTS - newAttempts;
       return NextResponse.json(
@@ -82,14 +73,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Reset failed attempts on success
-    await supabase
+    await admin
       .from('player_credentials')
       .update({ failed_attempts: 0, locked_until: null })
       .eq('player_id', cred.player_id);
 
-    // Get the player's profile_id to create a session
-    const { data: player } = await supabase
+    const { data: player } = await admin
       .from('players')
       .select('profile_id')
       .eq('id', cred.player_id)
@@ -102,13 +91,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Generate a Supabase session for this player
-    // This will use admin.generateLink or a custom JWT
-    
-    return NextResponse.json({ 
-      success: true,
-      playerId: cred.player_id,
+    const { data: authUser, error: authUserError } =
+      await admin.auth.admin.getUserById(player.profile_id);
+
+    const email = authUser?.user?.email;
+    if (authUserError || !email) {
+      return NextResponse.json(
+        { error: 'Akun pemain belum terhubung. Hubungi admin.' },
+        { status: 500 }
+      );
+    }
+
+    const { data: linkData, error: linkError } =
+      await admin.auth.admin.generateLink({ type: 'magiclink', email });
+
+    const tokenHash = linkData?.properties?.hashed_token;
+    if (linkError || !tokenHash) {
+      return NextResponse.json(
+        { error: 'Gagal masuk. Coba lagi dalam beberapa detik.' },
+        { status: 500 }
+      );
+    }
+
+    let response = NextResponse.json({ success: true, redirect: '/card' });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    const { error: sessionError } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: 'magiclink',
     });
+
+    if (sessionError) {
+      return NextResponse.json(
+        { error: 'Gagal masuk. Coba lagi.' },
+        { status: 500 }
+      );
+    }
+
+    return response;
   } catch {
     return NextResponse.json(
       { error: 'Terjadi kesalahan. Coba lagi.' },
