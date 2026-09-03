@@ -13,7 +13,12 @@ export default async function TeamsSettingsPage() {
   if (!user) {
     return (
       <Shell>
-        <EmptyState title="Sesi belum aktif" description="Masuk ulang untuk melihat kelas." theme="report" />
+        <EmptyState
+          icon={<UsersThree size={28} weight="duotone" />}
+          title="Sesi belum aktif"
+          description="Masuk ulang untuk melihat kelas."
+          theme="report"
+        />
       </Shell>
     );
   }
@@ -27,7 +32,12 @@ export default async function TeamsSettingsPage() {
   if (!profile?.organization_id) {
     return (
       <Shell>
-        <EmptyState title="Profil belum lengkap" description="Hubungi admin Dynasty." theme="report" />
+        <EmptyState
+          icon={<UsersThree size={28} weight="duotone" />}
+          title="Profil belum lengkap"
+          description="Hubungi admin Dynasty."
+          theme="report"
+        />
       </Shell>
     );
   }

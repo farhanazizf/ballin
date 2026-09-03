@@ -13,7 +13,12 @@ export default async function DrillsSettingsPage() {
   if (!user) {
     return (
       <Shell>
-        <EmptyState title="Sesi belum aktif" description="Masuk ulang untuk melihat drill." theme="report" />
+        <EmptyState
+          icon={<Barbell size={28} weight="duotone" />}
+          title="Sesi belum aktif"
+          description="Masuk ulang untuk melihat drill."
+          theme="report"
+        />
       </Shell>
     );
   }
@@ -27,7 +32,12 @@ export default async function DrillsSettingsPage() {
   if (!profile?.organization_id) {
     return (
       <Shell>
-        <EmptyState title="Profil belum lengkap" description="Hubungi admin Dynasty." theme="report" />
+        <EmptyState
+          icon={<Barbell size={28} weight="duotone" />}
+          title="Profil belum lengkap"
+          description="Hubungi admin Dynasty."
+          theme="report"
+        />
       </Shell>
     );
   }
