@@ -77,6 +77,7 @@ export function determineArchetype(attrs: AttributeValues): Archetype {
   let highestValue = -1;
 
   for (const [name, rule] of Object.entries(ARCHETYPE_RULES)) {
+    if (name === 'Glue Guy') continue;
     const value = attrs[rule.primary as AttributeName];
     if (value > highestValue && value >= rule.minPercentile) {
       highest = name as Archetype;
