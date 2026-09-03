@@ -3,16 +3,26 @@
   "short_name": "Ballin",
   "description": "Pencatatan latihan akademi basket",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#0D1520",
   "theme_color": "#0D1520",
   "orientation": "portrait",
+  "categories": ["sports", "education"],
   "icons": [
     {
       "src": "/logo-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "/logo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }
