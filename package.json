@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed:dev": "tsx scripts/seed-dev.ts",
+    "db:push": "supabase db push --linked",
+    "db:seed:dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -44,6 +49,7 @@
     "serwist": "^9.5.12",
     "supabase": "^2.116.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^5.0.0"
   },
