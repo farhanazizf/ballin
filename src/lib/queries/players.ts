@@ -115,7 +115,7 @@ export async function getPlayersForOrg(
 
   let items = (players ?? [])
     .map((player) => {
-      const teamPlayers = (player.team_players ?? []) as TeamPlayerJoin[];
+      const teamPlayers = (player.team_players ?? []) as unknown as TeamPlayerJoin[];
       const teamNames = activeTeamNames(teamPlayers);
       return {
         id: player.id as string,
@@ -151,7 +151,7 @@ export async function getPlayerDetail(
         `
         id, full_name, nickname, birth_date, jersey_number, position,
         dominant_hand, school, status, joined_at, guardian_name, guardian_phone, photo_path,
-        team_players ( left_at, teams ( name ) )
+        team_players ( left_at, team_id, teams ( name ) )
       `,
       )
       .eq('id', playerId)
@@ -176,7 +176,9 @@ export async function getPlayerDetail(
 
   if (!player) return null;
 
-  const teamNames = activeTeamNames((player.team_players ?? []) as TeamPlayerJoin[]);
+  const teamNames = activeTeamNames(
+    (player.team_players ?? []) as unknown as TeamPlayerJoin[],
+  );
 
   let photoUrl: string | null = null;
   if (player.photo_path) {
