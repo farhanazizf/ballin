@@ -1,0 +1,144 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export type SessionListItem = {
+  id: string;
+  scheduledStart: string;
+  scheduledEnd: string | null;
+  location: string | null;
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  sessionType: string;
+  teamName: string;
+  teamId: string;
+  attendanceCount: number;
+  rosterCount: number;
+};
+
+export type TeamOption = {
+  id: string;
+  name: string;
+  trackDrillStats: boolean;
+};
+
+export async function getTeamsForCoach(
+  supabase: SupabaseClient,
+  orgId: string,
+  coachTeamIds: string[],
+): Promise<TeamOption[]> {
+  let query = supabase
+    .from('teams')
+    .select('id, name, track_drill_stats')
+    .eq('organization_id', orgId)
+    .eq('is_active', true)
+    .order('name');
+
+  if (coachTeamIds.length > 0) {
+    query = query.in('id', coachTeamIds);
+  }
+
+  const { data } = await query;
+  return (data ?? []).map((t) => ({
+    id: t.id as string,
+    name: t.name as string,
+    trackDrillStats: t.track_drill_stats as boolean,
+  }));
+}
+
+export async function getSessionsList(
+  supabase: SupabaseClient,
+  orgId: string,
+  coachTeamIds: string[],
+): Promise<SessionListItem[]> {
+  let query = supabase
+    .from('sessions')
+    .select('id, scheduled_start, scheduled_end, location, status, session_type, team_id')
+    .eq('organization_id', orgId)
+    .order('scheduled_start', { ascending: false })
+    .limit(30);
+
+  if (coachTeamIds.length > 0) {
+    query = query.in('team_id', coachTeamIds);
+  }
+
+  const { data: sessions } = await query;
+  if (!sessions?.length) return [];
+
+  const teamIds = [...new Set(sessions.map((s) => s.team_id as string))];
+  const sessionIds = sessions.map((s) => s.id as string);
+
+  const [{ data: teams }, { data: attendance }, { data: roster }] = await Promise.all([
+    supabase.from('teams').select('id, name').in('id', teamIds),
+    supabase.from('attendance').select('session_id').in('session_id', sessionIds),
+    supabase.from('team_players').select('team_id, player_id, left_at').in('team_id', teamIds),
+  ]);
+
+  const teamNameMap = new Map((teams ?? []).map((t) => [t.id as string, t.name as string]));
+  const attendanceCount = new Map<string, number>();
+  for (const row of attendance ?? []) {
+    const sid = row.session_id as string;
+    attendanceCount.set(sid, (attendanceCount.get(sid) ?? 0) + 1);
+  }
+
+  const rosterCountByTeam = new Map<string, number>();
+  for (const row of roster ?? []) {
+    if (row.left_at) continue;
+    const tid = row.team_id as string;
+    rosterCountByTeam.set(tid, (rosterCountByTeam.get(tid) ?? 0) + 1);
+  }
+
+  return sessions.map((s) => ({
+    id: s.id as string,
+    scheduledStart: s.scheduled_start as string,
+    scheduledEnd: s.scheduled_end as string | null,
+    location: s.location as string | null,
+    status: s.status as SessionListItem['status'],
+    sessionType: s.session_type as string,
+    teamName: teamNameMap.get(s.team_id as string) ?? '',
+    teamId: s.team_id as string,
+    attendanceCount: attendanceCount.get(s.id as string) ?? 0,
+    rosterCount: rosterCountByTeam.get(s.team_id as string) ?? 0,
+  }));
+}
+
+export async function getSessionById(
+  supabase: SupabaseClient,
+  sessionId: string,
+): Promise<SessionListItem | null> {
+  const { data: session } = await supabase
+    .from('sessions')
+    .select('id, scheduled_start, scheduled_end, location, status, session_type, team_id, organization_id')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (!session) return null;
+
+  const { data: team } = await supabase
+    .from('teams')
+    .select('name, track_drill_stats')
+    .eq('id', session.team_id)
+    .maybeSingle();
+
+  const [{ count: attendanceCount }, { count: rosterCount }] = await Promise.all([
+    supabase
+      .from('attendance')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId),
+    supabase
+      .from('team_players')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', session.team_id)
+      .is('left_at', null),
+  ]);
+
+  return {
+    id: session.id,
+    scheduledStart: session.scheduled_start,
+    scheduledEnd: session.scheduled_end,
+    location: session.location,
+    status: session.status,
+    sessionType: session.session_type,
+    teamName: team?.name ?? '',
+    teamId: session.team_id,
+    attendanceCount: attendanceCount ?? 0,
+    rosterCount: rosterCount ?? 0,
+  };
+}
