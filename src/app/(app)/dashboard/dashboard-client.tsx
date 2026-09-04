@@ -199,7 +199,7 @@ export function DashboardClient({
               </div>
 
               <Link
-                href={`/field/session/${upcomingSession.id}`}
+                href={`/session//attendance`}
                 className={cn(
                   'w-full md:w-auto',
                   'inline-flex items-center justify-center gap-2',

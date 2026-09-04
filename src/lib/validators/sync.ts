@@ -1,14 +1,15 @@
 import { z } from 'zod/v4';
+import { idSchema } from './id';
 
 export const syncEventSchema = z.object({
   clientEventId: z.string().uuid(),
-  sessionDrillId: z.string().uuid(),
-  playerId: z.string().uuid(),
+  sessionDrillId: idSchema,
+  playerId: idSchema,
   result: z.enum(['made', 'miss', 'dnp']),
   value: z.number().optional(),
   occurredAt: z.iso.datetime(),
   deviceId: z.string().min(1),
-  recordedBy: z.string().uuid(),
+  recordedBy: idSchema,
 });
 
 export const syncEventsBatchSchema = z.object({
@@ -16,13 +17,13 @@ export const syncEventsBatchSchema = z.object({
 });
 
 export const syncAttendanceSchema = z.object({
-  sessionId: z.string().uuid(),
-  playerId: z.string().uuid(),
+  sessionId: idSchema,
+  playerId: idSchema,
   sessionDate: z.iso.date(),
   status: z.enum(['present', 'late', 'excused', 'sick', 'absent']),
   method: z.enum(['qr', 'manual', 'auto', 'kiosk']),
   checkedInAt: z.iso.datetime(),
-  recordedBy: z.string().uuid(),
+  recordedBy: idSchema,
 });
 
 export const syncAttendanceBatchSchema = z.object({

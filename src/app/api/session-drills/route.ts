@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod/v4';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { idSchema } from '@/lib/validators/id';
 
 const bodySchema = z.object({
-  sessionId: z.string().uuid(),
-  drillId: z.string().uuid(),
+  sessionId: idSchema,
+  drillId: idSchema,
   target: z.number().int().positive().optional(),
   trackMisses: z.boolean().optional(),
 });
