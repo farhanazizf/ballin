@@ -1,6 +1,6 @@
 # Ballin — task list & progress
 
-> **Update terakhir:** 2026-09-04 (Sprint 5–6 selesai)  
+> **Update terakhir:** 2026-09-04 (Sprint 7–8 selesai)  
 > **Cara pakai:** centang `[x]` saat selesai. Agent **wajib** update file ini setiap selesai task.
 
 **Legenda:** `[x]` selesai · `[~]` sebagian · `[ ]` belum
@@ -50,7 +50,7 @@
 
 ---
 
-## Sprint 5–6 — Coach + player polish ← **current**
+## Sprint 5–6 — Coach + player polish
 
 | # | Task | Status | Catatan |
 |---|------|--------|---------|
@@ -60,17 +60,17 @@
 
 ---
 
-## Sprint 7–8 — Fase 1
+## Sprint 7–8 — Fase 1 ← **current**
 
-| # | Task | Status |
-|---|------|--------|
-| 21 | Benchmark sessions | [ ] |
-| 22 | Rubric scores form | [ ] |
-| 23 | Player notes | [ ] |
-| 24 | Matches + box scores | [ ] |
-| 25 | AI report provider | [ ] |
-| 26 | PDF export rapor | [ ] |
-| 27 | Playwright hardening | [ ] |
+| # | Task | Status | Catatan |
+|---|------|--------|---------|
+| 21 | Benchmark sessions | [x] | battery auto-attach, toggle di form sesi |
+| 22 | Rubric scores form | [x] | `/session/[id]/rubric`, rotasi 5 pemain |
+| 23 | Player notes | [x] | `/session/[id]/close`, catatan sesi + pemain |
+| 24 | Matches + box scores | [x] | `/matches`, box score form |
+| 25 | AI report provider | [x] | `lib/ai/provider`, template fallback |
+| 26 | PDF export rapor | [x] | `/api/reports/[id]/pdf` |
+| 27 | Playwright hardening | [x] | benchmark + sync hook e2e |
 
 ---
 
@@ -82,11 +82,11 @@
 | 2 | 11 | 11 | **100%** |
 | 3–4 | 6 | 6 | **100%** |
 | 5–6 | 3 | 3 | **100%** |
-| 7–8 | 0 | 7 | 0% |
+| 7–8 | 7 | 7 | **100%** |
 
-**Berikutnya:** Sprint 7–8 — benchmark sessions, rubric scores, player notes.
+**Berikutnya:** Pilot prep — `pnpm db:push` migration 00006, seed dev, uji end-to-end di lapangan.
 
-**Migration:** `00005_station_players_manage.sql` — jalankan `pnpm db:push`.
+**Migration:** `00006_box_scores_manage.sql` — jalankan `pnpm db:push`.
 
 ---
 
@@ -94,7 +94,8 @@
 
 | Tanggal | Perubahan |
 |---------|-----------|
-| 2026-09-04 | Sprint 5–6 selesai: profil coach, dashboard alerts, player logout/refresh |
+| 2026-09-04 | Sprint 7–8 selesai: benchmark, rubrik, notes, match, rapor AI/PDF |
+| 2026-09-04 | Sprint 7–8 selesai: profil coach, dashboard alerts, player logout/refresh |
 | 2026-09-04 | Sprint 3–4 selesai: stations, input shells, Playwright offline gate |
 | 2026-09-04 | Task 16 review screen selesai |
 | 2026-09-04 | Sprint 2 selesai: recurring sessions, measurements, credentials |

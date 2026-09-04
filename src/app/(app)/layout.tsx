@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/dashboard', label: 'Beranda', code: '01' },
   { href: '/players', label: 'Pemain', code: '02' },
   { href: '/sessions', label: 'Latihan', code: '03' },
+  { href: '/matches', label: 'Match', code: '03b' },
   { href: '/reports', label: 'Rapor', code: '04' },
   { href: '/settings', label: 'Pengaturan', code: '05' },
 ] as const;
