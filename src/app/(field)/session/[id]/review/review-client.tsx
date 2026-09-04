@@ -319,6 +319,12 @@ export function ReviewClient({
             'Simpan review'
           )}
         </Button>
+        <Link
+          href={`/session/${sessionId}/rubric`}
+          className="mt-2 block text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-phosphor)]"
+        >
+          Lanjut ke rubrik →
+        </Link>
       </footer>
     </div>
   );
