@@ -10,6 +10,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<'local' | 'syncing' | 'synced'>('local');
 
   useEffect(() => {
+    (window as Window & {
+      __ballinSyncNow?: typeof syncNow;
+      __ballinGetOutboxPending?: () => Promise<number>;
+    }).__ballinSyncNow = syncNow;
+    (window as Window & { __ballinGetOutboxPending?: () => Promise<number> }).__ballinGetOutboxPending =
+      async () => {
+        const status = await getOutboxStatus();
+        return status.pending + status.failed;
+      };
     startSyncEngine();
 
     const refresh = async () => {

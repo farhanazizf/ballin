@@ -56,6 +56,38 @@ insert into coach_teams (coach_id, team_id)
 select '10000000-0000-0000-0000-000000000003', id from teams
 where organization_id = '00000000-0000-0000-0000-000000000001' and name = 'Hoops';
 
+
+-- DRILL LIBRARY (dev minimum untuk lapangan + e2e) ------------
+insert into drills (
+  id, organization_id, name, category, type, default_target, unit,
+  lower_is_better, attribute_weights, instructions
+) values
+  ('61000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+   'Free throw', 'Shooting', 'attempt', 10, 'percobaan', false,
+   '{"shooting":0.8,"attitude":0.2}', 'Dev seed — free throw'),
+  ('61000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001',
+   'Dribble zigzag cone', 'Ballhandling', 'timed', null, 'detik', true,
+   '{"ballhandling":0.7,"athleticism":0.3}', 'Dev seed — timed drill'),
+  ('61000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001',
+   'Two-ball dribble 30 detik', 'Ballhandling', 'count_in_time', 30, 'repetisi', false,
+   '{"ballhandling":1.0}', 'Dev seed — count in time'),
+  ('61000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001',
+   'Vertical jump', 'Athleticism', 'measure', null, 'cm', false,
+   '{"athleticism":1.0}', 'Dev seed — measure'),
+  ('61000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001',
+   'Closeout', 'Defense', 'rating', null, 'skala 1-5', false,
+   '{"defense":1.0}', 'Dev seed — rating')
+on conflict (id) do update set
+  name = excluded.name,
+  category = excluded.category,
+  type = excluded.type,
+  default_target = excluded.default_target,
+  unit = excluded.unit,
+  lower_is_better = excluded.lower_is_better,
+  attribute_weights = excluded.attribute_weights,
+  instructions = excluded.instructions,
+  is_archived = false;
+
 -- PEMAIN ------------------------------------------------------
 insert into players (
   id, organization_id, profile_id, full_name, nickname, birth_date,

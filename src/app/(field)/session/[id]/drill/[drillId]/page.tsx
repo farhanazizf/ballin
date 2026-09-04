@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { DrillClient } from './drill-client';
@@ -13,5 +14,9 @@ export default async function DrillPage({ params }: Props) {
 
   if (!user) redirect('/login');
 
-  return <DrillClient sessionId={id} drillId={drillId} coachId={user.id} />;
+  return (
+    <Suspense fallback={<div className="p-4 text-[var(--color-field-text-3)]">Menyiapkan drill...</div>}>
+      <DrillClient sessionId={id} drillId={drillId} coachId={user.id} />
+    </Suspense>
+  );
 }

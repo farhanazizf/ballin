@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     { data: drills },
     { data: sessionDrills },
     { data: attendance },
+    { data: stations },
   ] = await Promise.all([
     supabase
       .from('team_players')
@@ -53,17 +54,30 @@ export async function GET(request: NextRequest) {
       .eq('is_archived', false),
     supabase
       .from('session_drills')
-      .select('id, session_id, drill_id, target, track_misses, started_at')
+      .select('id, session_id, station_id, drill_id, target, track_misses, started_at')
       .eq('session_id', sessionId),
     supabase
       .from('attendance')
       .select('player_id, status, session_date, method, checked_in_at')
       .eq('session_id', sessionId),
+    supabase
+      .from('session_stations')
+      .select('id, label, coach_id, sort_order, station_players ( player_id )')
+      .eq('session_id', sessionId)
+      .order('sort_order'),
   ]);
 
   type TeamPlayerRow = {
     player_id: string;
     players: { id: string; nickname: string; full_name: string; jersey_number: number | null } | null;
+  };
+
+  type StationRow = {
+    id: string;
+    label: string;
+    coach_id: string | null;
+    sort_order: number;
+    station_players: Array<{ player_id: string }> | null;
   };
 
   const players = ((teamPlayers ?? []) as TeamPlayerRow[])
@@ -106,10 +120,18 @@ export async function GET(request: NextRequest) {
     sessionDrills: (sessionDrills ?? []).map((sd) => ({
       id: sd.id as string,
       sessionId: sd.session_id as string,
+      stationId: sd.station_id as string | null,
       drillId: sd.drill_id as string,
       target: sd.target as number | null,
       trackMisses: sd.track_misses as boolean,
       startedAt: sd.started_at as string,
+    })),
+    stations: ((stations ?? []) as StationRow[]).map((station) => ({
+      id: station.id,
+      label: station.label,
+      coachId: station.coach_id,
+      sortOrder: station.sort_order,
+      playerIds: (station.station_players ?? []).map((row) => row.player_id),
     })),
     attendance: (attendance ?? []).map((a) => ({
       playerId: a.player_id as string,

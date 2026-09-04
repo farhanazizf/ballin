@@ -74,20 +74,23 @@ const PlayerCard = memo(function PlayerCard({
       {counts.dnp ? (
         <p className="text-xs text-[var(--color-field-text-3)] font-[family-name:var(--font-ui)]">Tidak ikut</p>
       ) : (
-        <StatNumber
-          value={counts.made}
-          suffix={counts.attempts > 0 ? `/${counts.attempts}` : undefined}
-          size="card"
-          theme="field"
-        />
+        <div data-testid={`drill-count-${player.id}`}>
+          <StatNumber
+            value={counts.made}
+            suffix={counts.attempts > 0 ? `/${counts.attempts}` : undefined}
+            size="card"
+            theme="field"
+          />
+        </div>
       )}
       {!counts.dnp && (
         <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
+            data-testid={`drill-made-${player.id}`}
             onClick={onMade}
             className={cn(
-              'h-10 rounded-lg text-sm font-semibold font-[family-name:var(--font-ui)]',
+              'h-10 rounded-none text-sm font-semibold font-[family-name:var(--font-ui)]',
               'bg-[var(--color-made)]/20 text-[var(--color-made)] active:scale-[0.97]',
             )}
           >
@@ -97,7 +100,7 @@ const PlayerCard = memo(function PlayerCard({
             type="button"
             onClick={onMiss}
             className={cn(
-              'h-10 rounded-lg text-sm font-semibold font-[family-name:var(--font-ui)]',
+              'h-10 rounded-none text-sm font-semibold font-[family-name:var(--font-ui)]',
               'bg-[var(--color-miss)]/15 text-[var(--color-miss)] active:scale-[0.97]',
             )}
           >
@@ -107,7 +110,7 @@ const PlayerCard = memo(function PlayerCard({
             type="button"
             onClick={onDnp}
             className={cn(
-              'h-10 rounded-lg text-xs font-medium font-[family-name:var(--font-ui)]',
+              'h-10 rounded-none text-xs font-medium font-mono uppercase tracking-[0.06em]',
               'bg-[var(--color-field-raised)] text-[var(--color-field-text-3)] active:scale-[0.97]',
             )}
           >
@@ -161,7 +164,7 @@ export function DrillGrid({
             </p>
           )}
         </div>
-        <Button variant="secondary" size="sm" onClick={handleUndo} disabled={!lastPlayerId}>
+        <Button variant="secondary" size="sm" data-testid="drill-undo" onClick={handleUndo} disabled={!lastPlayerId}>
           Undo
         </Button>
       </header>

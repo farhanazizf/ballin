@@ -94,7 +94,17 @@ async function sendBatch(items: OutboxItem[]): Promise<{ ok: boolean; status: nu
       recordedBy: string;
     });
 
-  if (drillEvents.length === 0 && attendanceRecords.length === 0) {
+  const drillResults = items
+    .filter((item) => item.table === 'drill_results')
+    .map((item) => item.payload as {
+      sessionDrillId: string;
+      playerId: string;
+      made: number;
+      attempts: number;
+      isDnp: boolean;
+    });
+
+  if (drillEvents.length === 0 && attendanceRecords.length === 0 && drillResults.length === 0) {
     return { ok: true, status: 200 };
   }
 
@@ -118,6 +128,18 @@ async function sendBatch(items: OutboxItem[]): Promise<{ ok: boolean; status: nu
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ records: attendanceRecords }),
+      }),
+    );
+  }
+
+
+  if (drillResults.length > 0) {
+    requests.push(
+      fetch('/api/sync/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ results: drillResults }),
       }),
     );
   }

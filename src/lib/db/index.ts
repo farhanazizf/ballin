@@ -77,6 +77,31 @@ export interface LocalAttendance {
   recordedBy: string;
 }
 
+export interface LocalReviewOverride {
+  key: string;
+  sessionDrillId: string;
+  playerId: string;
+  made: number;
+  attempts: number;
+  isDnp: boolean;
+  updatedAt: string;
+  recordedBy: string;
+}
+
+export interface LocalStation {
+  id: string;
+  sessionId: string;
+  label: string;
+  coachId?: string;
+  sortOrder: number;
+}
+
+export interface LocalStationPlayer {
+  key: string;
+  stationId: string;
+  playerId: string;
+}
+
 export interface OutboxItem {
   seq?: number;
   clientEventId: string;
@@ -97,6 +122,9 @@ class BallinDB extends Dexie {
   sessionDrills!: EntityTable<LocalSessionDrill, 'id'>;
   localEvents!: EntityTable<LocalDrillEvent, 'clientEventId'>;
   localAttendance!: EntityTable<LocalAttendance, 'key'>;
+  reviewOverrides!: EntityTable<LocalReviewOverride, 'key'>;
+  stations!: EntityTable<LocalStation, 'id'>;
+  stationPlayers!: EntityTable<LocalStationPlayer, 'key'>;
   outbox!: EntityTable<OutboxItem, 'seq'>;
 
   constructor() {
@@ -114,6 +142,15 @@ class BallinDB extends Dexie {
 
     this.version(2).stores({
       localAttendance: 'key, sessionId, playerId',
+    });
+
+    this.version(3).stores({
+      reviewOverrides: 'key, sessionDrillId, playerId',
+    });
+
+    this.version(4).stores({
+      stations: 'id, sessionId',
+      stationPlayers: 'key, stationId, playerId',
     });
   }
 }

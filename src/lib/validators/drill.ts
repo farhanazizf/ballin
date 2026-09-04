@@ -21,6 +21,12 @@ export const drillSchema = z.object({
 
 export type DrillInput = z.infer<typeof drillSchema>;
 
+export const drillUpdateSchema = drillSchema.partial().extend({
+  isArchived: z.boolean().optional(),
+});
+
+export type DrillUpdateInput = z.infer<typeof drillUpdateSchema>;
+
 export const drillEventSchema = z.object({
   sessionDrillId: z.string().uuid(),
   playerId: z.string().uuid(),

@@ -32,3 +32,22 @@ export const syncAttendanceBatchSchema = z.object({
 
 export type SyncEvent = z.infer<typeof syncEventSchema>;
 export type SyncAttendance = z.infer<typeof syncAttendanceSchema>;
+
+export const syncResultSchema = z
+  .object({
+    sessionDrillId: idSchema,
+    playerId: idSchema,
+    made: z.number().int().min(0),
+    attempts: z.number().int().min(0),
+    isDnp: z.boolean(),
+  })
+  .refine((data) => data.isDnp || data.attempts >= data.made, {
+    message: 'Made tidak boleh lebih besar dari attempts',
+    path: ['made'],
+  });
+
+export const syncResultsBatchSchema = z.object({
+  results: z.array(syncResultSchema).min(1).max(50),
+});
+
+export type SyncResult = z.infer<typeof syncResultSchema>;

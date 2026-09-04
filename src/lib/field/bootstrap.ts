@@ -32,10 +32,18 @@ export type FieldBootstrapPayload = {
   sessionDrills: Array<{
     id: string;
     sessionId: string;
+    stationId?: string | null;
     drillId: string;
     target?: number | null;
     trackMisses: boolean;
     startedAt: string;
+  }>;
+  stations: Array<{
+    id: string;
+    label: string;
+    coachId?: string | null;
+    sortOrder: number;
+    playerIds: string[];
   }>;
   attendance: Array<{
     playerId: string;
@@ -56,6 +64,8 @@ export async function cacheFieldBootstrap(data: FieldBootstrapPayload) {
       db.drills,
       db.sessionDrills,
       db.localAttendance,
+      db.stations,
+      db.stationPlayers,
     ],
     async () => {
       await db.sessions.put({
@@ -102,11 +112,36 @@ export async function cacheFieldBootstrap(data: FieldBootstrapPayload) {
         await db.sessionDrills.put({
           id: sd.id,
           sessionId: sd.sessionId,
+          stationId: sd.stationId ?? undefined,
           drillId: sd.drillId,
           target: sd.target ?? undefined,
           trackMisses: sd.trackMisses,
           startedAt: sd.startedAt,
         });
+      }
+
+      const existingStations = await db.stations.where('sessionId').equals(data.session.id).toArray();
+      const existingStationIds = existingStations.map((s) => s.id);
+      if (existingStationIds.length > 0) {
+        await db.stationPlayers.where('stationId').anyOf(existingStationIds).delete();
+        await db.stations.where('sessionId').equals(data.session.id).delete();
+      }
+
+      for (const station of data.stations) {
+        await db.stations.put({
+          id: station.id,
+          sessionId: data.session.id,
+          label: station.label,
+          coachId: station.coachId ?? undefined,
+          sortOrder: station.sortOrder,
+        });
+        for (const playerId of station.playerIds) {
+          await db.stationPlayers.put({
+            key: `${station.id}:${playerId}`,
+            stationId: station.id,
+            playerId,
+          });
+        }
       }
 
       for (const row of data.attendance) {
