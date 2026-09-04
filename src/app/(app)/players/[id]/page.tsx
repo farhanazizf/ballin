@@ -178,8 +178,11 @@ export default async function PlayerDetailPage({ params }: PageProps) {
         <Link
           href={`/players/${player.id}/credentials`}
           className={cn(
-            buttonVariants({ variant: 'report-secondary', size: 'md' }),
-            'w-full sm:w-auto inline-flex',
+            'inline-flex items-center justify-center gap-2 h-12 px-5 rounded-[var(--radius-button)]',
+            'bg-[var(--color-report-surface)] text-[var(--color-report-text)]',
+            'border border-[var(--color-report-border)] hover:bg-[var(--color-report-bg)]',
+            'font-[family-name:var(--font-ui)] font-semibold text-base transition-all duration-150',
+            'w-full sm:w-auto',
           )}
         >
           Kelola kredensial
