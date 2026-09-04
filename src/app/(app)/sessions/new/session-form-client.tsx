@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeft, CircleNotch } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { sessionSchema, type SessionInput } from '@/lib/validators/session';
+import { sessionTypeLabel } from '@/lib/benchmark/battery';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ type SessionFormValues = {
   teamId: string;
   scheduledStartLocal: string;
   location?: string;
+  sessionType: 'training' | 'benchmark';
 };
 
 function toIsoFromLocalDateTime(local: string): string {
@@ -45,6 +47,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
       teamId: teams[0]?.id ?? '',
       scheduledStartLocal: defaultLocalDateTime(),
       location: '',
+      sessionType: 'training',
     },
   });
 
@@ -55,7 +58,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
       teamId: values.teamId,
       scheduledStart: toIsoFromLocalDateTime(values.scheduledStartLocal),
       location: values.location?.trim() || undefined,
-      sessionType: 'training',
+      sessionType: values.sessionType,
     };
 
     const parsed = sessionSchema.safeParse(payload);
@@ -116,10 +119,31 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
           Buat sesi latihan
         </h1>
         <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-1 mb-8">
-          Isi kelas, waktu, dan lokasi latihan berikutnya.
+          Isi kelas, waktu, dan lokasi. Pilih benchmark untuk sesi tes terstandar.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="sessionType"
+              className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]"
+            >
+              Tipe sesi
+            </label>
+            <select
+              id="sessionType"
+              disabled={isPending || teams.length === 0}
+              {...register('sessionType', { required: true })}
+              className={cn(
+                'h-12 w-full px-4 rounded-[var(--radius-button)] border',
+                'bg-[var(--color-report-surface)] border-[var(--color-report-border)]',
+                'text-[var(--color-report-text)] font-[family-name:var(--font-ui)] text-base',
+              )}
+            >
+              <option value="training">{sessionTypeLabel('training')}</option>
+              <option value="benchmark">{sessionTypeLabel('benchmark')}</option>
+            </select>
+          </div>
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="teamId"

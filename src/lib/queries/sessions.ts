@@ -9,6 +9,7 @@ import {
 } from '@/lib/validators/session';
 import { buildRecurringSessionStarts } from '@/lib/sessions/recurrence';
 import { getCoachTeamIds } from '@/lib/queries/dashboard';
+import { attachBenchmarkBattery } from '@/lib/benchmark/attach';
 
 export type SessionStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
 
@@ -146,6 +147,19 @@ export async function createSession(
 
   if (error || !data) {
     return { error: 'Gagal menyimpan sesi. Coba lagi dalam beberapa saat.' };
+  }
+
+  if (input.sessionType === 'benchmark') {
+    const attachResult = await attachBenchmarkBattery(
+      supabase,
+      orgId,
+      data.id as string,
+      coachId,
+    );
+    if ('error' in attachResult) {
+      await supabase.from('sessions').delete().eq('id', data.id);
+      return attachResult;
+    }
   }
 
   return { id: data.id };

@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { sessionTypeLabel } from '@/lib/benchmark/battery';
 import {
   formatSessionTime,
   groupSessionsByDate,
@@ -55,6 +56,7 @@ export function SessionsClient({
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('16:00');
   const [location, setLocation] = useState('');
+  const [sessionType, setSessionType] = useState<'training' | 'benchmark'>('training');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recurring, setRecurring] = useState(false);
@@ -107,7 +109,7 @@ export function SessionsClient({
           startTime,
           horizonWeeks,
           location: location.trim() || undefined,
-          sessionType: 'training',
+          sessionType,
         }),
       });
 
@@ -134,7 +136,7 @@ export function SessionsClient({
         teamId,
         scheduledStart,
         location: location.trim() || undefined,
-        sessionType: 'training',
+        sessionType,
       }),
     });
 
@@ -216,6 +218,17 @@ export function SessionsClient({
               /// {error}
             </p>
           ) : null}
+          <label className="flex flex-col gap-2">
+            <span className="brut-label text-[var(--color-report-text-3)]">Tipe sesi</span>
+            <select
+              value={sessionType}
+              onChange={(e) => setSessionType(e.target.value as 'training' | 'benchmark')}
+              className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm"
+            >
+              <option value="training">{sessionTypeLabel('training')}</option>
+              <option value="benchmark">{sessionTypeLabel('benchmark')}</option>
+            </select>
+          </label>
           <label className="flex flex-col gap-2">
             <span className="brut-label text-[var(--color-report-text-3)]">
               Kelas
@@ -366,7 +379,7 @@ export function SessionsClient({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-[family-name:var(--font-display)] font-semibold text-sm text-[var(--color-report-text)]">
-                            {session.teamName}
+                            {session.teamName}{session.sessionType === 'benchmark' ? ' · Benchmark' : ''}
                           </span>
                           <span
                             className={cn(
