@@ -76,7 +76,19 @@ insert into drills (
    '{"athleticism":1.0}', 'Dev seed — measure'),
   ('61000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001',
    'Closeout', 'Defense', 'rating', null, 'skala 1-5', false,
-   '{"defense":1.0}', 'Dev seed — rating')
+   '{"defense":1.0}', 'Dev seed — rating'),
+  ('61000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000001',
+   'Sprint 3/4 lapangan', 'Athleticism', 'timed', null, 'detik', true,
+   '{"athleticism":1.0}', 'Dev seed — benchmark sprint'),
+  ('61000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000001',
+   'Defensive slide (lane agility)', 'Defense', 'timed', null, 'detik', true,
+   '{"defense":0.6,"athleticism":0.4}', 'Dev seed — benchmark agility'),
+  ('61000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000001',
+   'Beep test', 'Conditioning', 'measure', null, 'level', false,
+   '{"athleticism":1.0}', 'Dev seed — benchmark beep'),
+  ('61000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000001',
+   'Spot shooting 5 titik', 'Shooting', 'attempt', 10, 'percobaan', false,
+   '{"shooting":1.0}', 'Dev seed — benchmark spot shooting')
 on conflict (id) do update set
   name = excluded.name,
   category = excluded.category,
