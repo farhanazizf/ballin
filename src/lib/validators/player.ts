@@ -17,6 +17,12 @@ export const playerSchema = z.object({
 
 export type PlayerInput = z.infer<typeof playerSchema>;
 
+export const playerUpdateSchema = playerSchema.partial().extend({
+  status: z.enum(['active', 'inactive']).optional(),
+});
+
+export type PlayerUpdateInput = z.infer<typeof playerUpdateSchema>;
+
 export const playerMeasurementSchema = z.object({
   playerId: z.string().uuid(),
   measuredOn: z.iso.date(),

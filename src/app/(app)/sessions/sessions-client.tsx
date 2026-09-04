@@ -57,6 +57,28 @@ export function SessionsClient({
   const [location, setLocation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recurring, setRecurring] = useState(false);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([2, 4]);
+  const [horizonWeeks, setHorizonWeeks] = useState(8);
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
+  const DAY_OPTIONS = [
+    { value: 1, label: 'Sen' },
+    { value: 2, label: 'Sel' },
+    { value: 3, label: 'Rab' },
+    { value: 4, label: 'Kam' },
+    { value: 5, label: 'Jum' },
+    { value: 6, label: 'Sab' },
+    { value: 7, label: 'Min' },
+  ] as const;
+
+  function toggleDay(day: number) {
+    setDaysOfWeek((current) =>
+      current.includes(day) ? current.filter((d) => d !== day) : [...current, day].sort((a, b) => a - b),
+    );
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -67,6 +89,40 @@ export function SessionsClient({
 
     setSubmitting(true);
     setError(null);
+
+    if (recurring) {
+      if (daysOfWeek.length === 0) {
+        setError('Pilih minimal satu hari untuk jadwal berulang.');
+        setSubmitting(false);
+        return;
+      }
+
+      const res = await fetch('/api/session-schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          teamId,
+          daysOfWeek,
+          startTime,
+          horizonWeeks,
+          location: location.trim() || undefined,
+          sessionType: 'training',
+        }),
+      });
+
+      const body = (await res.json()) as { sessionCount?: number; error?: string };
+      setSubmitting(false);
+
+      if (!res.ok) {
+        setError(body.error ?? 'Gagal membuat jadwal berulang.');
+        return;
+      }
+
+      setShowForm(false);
+      router.refresh();
+      return;
+    }
 
     const scheduledStart = new Date(`${date}T${startTime}:00+07:00`).toISOString();
 
@@ -94,17 +150,42 @@ export function SessionsClient({
     router.refresh();
   }
 
+  async function handleCancel(sessionId: string) {
+    if (!cancelReason.trim()) {
+      setError('Isi alasan pembatalan sesi.');
+      return;
+    }
+    setCancelling(true);
+    setError(null);
+    const res = await fetch(`/api/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'cancel', cancelReason: cancelReason.trim() }),
+    });
+    const body = (await res.json()) as { error?: string };
+    setCancelling(false);
+    if (!res.ok) {
+      setError(body.error ?? 'Gagal membatalkan sesi.');
+      return;
+    }
+    setCancelTarget(null);
+    setCancelReason('');
+    router.refresh();
+  }
+
   return (
     <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex items-start justify-between gap-4 border-b-2 border-[var(--color-report-border)] pb-5">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-semibold tracking-tight text-[var(--color-report-text)]">
+          <p className="brut-label text-[var(--color-hazard)]">[ Schedule / Sessions ]</p>
+          <h1 className="brut-heading mt-2 text-2xl md:text-3xl text-[var(--color-report-text)]">
             Latihan
           </h1>
-          <p className="mt-1 text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]">
+          <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
             {sessions.length > 0
               ? `${sessions.length} sesi tercatat`
-              : 'Kelola jadwal latihan tim Anda'}
+              : 'Kelola jadwal latihan tim'}
           </p>
         </div>
         <Button
@@ -123,26 +204,26 @@ export function SessionsClient({
           {...fadeUp}
           onSubmit={handleCreate}
           className={cn(
-            'rounded-[var(--radius-panel)] border border-[var(--color-report-border)]',
+            'border-2 border-[var(--color-report-border)]',
             'bg-[var(--color-report-surface)] p-5 space-y-4',
           )}
         >
-          <h2 className="font-[family-name:var(--font-ui)] font-semibold text-[var(--color-report-text)]">
-            Sesi latihan baru
+          <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-report-text)]">
+            &gt;&gt;&gt; Sesi latihan baru
           </h2>
           {error ? (
-            <p className="text-sm text-[var(--color-miss)] font-[family-name:var(--font-ui)]">
-              {error}
+            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-hazard)]">
+              /// {error}
             </p>
           ) : null}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]">
+          <label className="flex flex-col gap-2">
+            <span className="brut-label text-[var(--color-report-text-3)]">
               Kelas
             </span>
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
-              className="h-12 w-full px-4 rounded-[var(--radius-button)] border border-[var(--color-report-border)] bg-[var(--color-report-surface)] font-[family-name:var(--font-ui)] text-[var(--color-report-text)]"
+              className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm text-[var(--color-report-text)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]"
             >
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
@@ -152,31 +233,75 @@ export function SessionsClient({
             </select>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]">
+            <label className="flex flex-col gap-2">
+              <span className="brut-label text-[var(--color-report-text-3)]">
                 Tanggal
               </span>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="h-12 w-full px-4 rounded-[var(--radius-button)] border border-[var(--color-report-border)] bg-[var(--color-report-surface)] font-[family-name:var(--font-ui)] text-[var(--color-report-text)]"
+                className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm text-[var(--color-report-text)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]"
               />
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]">
+            <label className="flex flex-col gap-2">
+              <span className="brut-label text-[var(--color-report-text-3)]">
                 Waktu mulai
               </span>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="h-12 w-full px-4 rounded-[var(--radius-button)] border border-[var(--color-report-border)] bg-[var(--color-report-surface)] font-[family-name:var(--font-ui)] text-[var(--color-report-text)]"
+                className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm text-[var(--color-report-text)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]"
               />
             </label>
           </div>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]">
+          <label className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--color-report-text-2)]">
+            <input
+              type="checkbox"
+              checked={recurring}
+              onChange={(e) => setRecurring(e.target.checked)}
+              className="h-4 w-4 accent-[var(--color-hazard)]"
+            />
+            Jadwal berulang mingguan
+          </label>
+          {recurring ? (
+            <div className="space-y-3 border border-[var(--color-report-border)] p-3">
+              <p className="brut-label text-[var(--color-report-text-3)]">Hari latihan</p>
+              <div className="flex flex-wrap gap-2">
+                {DAY_OPTIONS.map((day) => (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => toggleDay(day.value)}
+                    className={cn(
+                      'px-3 py-2 font-mono text-[10px] uppercase border-2',
+                      daysOfWeek.includes(day.value)
+                        ? 'border-[var(--color-hazard)] bg-[var(--color-hazard)] text-[var(--color-phosphor)]'
+                        : 'border-[var(--color-report-border)] text-[var(--color-report-text-2)]',
+                    )}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+              <label className="flex flex-col gap-2">
+                <span className="brut-label text-[var(--color-report-text-3)]">
+                  Minggu ke depan
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={26}
+                  value={horizonWeeks}
+                  onChange={(e) => setHorizonWeeks(Number(e.target.value) || 8)}
+                  className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm"
+                />
+              </label>
+            </div>
+          ) : null}
+          <label className="flex flex-col gap-2">
+            <span className="brut-label text-[var(--color-report-text-3)]">
               Lokasi
             </span>
             <input
@@ -184,12 +309,12 @@ export function SessionsClient({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Contoh: GOR Dynasty"
-              className="h-12 w-full px-4 rounded-[var(--radius-button)] border border-[var(--color-report-border)] bg-[var(--color-report-surface)] font-[family-name:var(--font-ui)] text-[var(--color-report-text)] placeholder:text-[var(--color-report-text-3)]"
+              className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm text-[var(--color-report-text)] placeholder:text-[var(--color-report-text-3)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]"
             />
           </label>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" variant="report-primary" disabled={submitting}>
-              {submitting ? 'Menyimpan...' : 'Simpan sesi'}
+              {submitting ? 'Menyimpan...' : recurring ? 'Buat jadwal berulang' : 'Simpan sesi'}
             </Button>
             <Button type="button" variant="report-ghost" onClick={() => setShowForm(false)}>
               Batal
@@ -219,15 +344,15 @@ export function SessionsClient({
               {...fadeUp}
               transition={{ ...fadeUp.transition, delay: groupIndex * 0.05 }}
             >
-              <h2 className="text-sm font-semibold text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mb-3">
+              <h2 className="brut-label text-[var(--color-report-text-3)] mb-3">
                 {group.dateLabel}
               </h2>
-              <ul className="divide-y divide-[var(--color-report-border)] rounded-[var(--radius-panel)] border border-[var(--color-report-border)] bg-[var(--color-report-surface)] overflow-hidden">
+              <ul className="divide-y divide-[var(--color-report-border)] border-2 border-[var(--color-report-border)] bg-[var(--color-report-surface)] overflow-hidden">
                 {group.sessions.map((session) => {
                   const isActive = session.status === 'active';
                   const rowContent = (
                     <>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[var(--color-report-bg)]">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-[var(--color-report-border)] bg-[var(--color-report-bg)]">
                         <CalendarDots
                           size={20}
                           weight="duotone"
@@ -296,9 +421,56 @@ export function SessionsClient({
                     );
                   }
 
+                  const canCancel = session.status === 'scheduled';
+
                   return (
-                    <li key={session.id} className="flex items-center gap-3 px-4 py-4">
-                      {rowContent}
+                    <li key={session.id} className="px-4 py-4">
+                      <div className="flex items-center gap-3">{rowContent}</div>
+                      {canCancel && (
+                        <div className="mt-3 pl-[3.25rem]">
+                          {cancelTarget === session.id ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="Alasan pembatalan"
+                                className="h-10 w-full border border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-3 font-mono text-xs"
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="report-secondary"
+                                  size="sm"
+                                  disabled={cancelling}
+                                  onClick={() => void handleCancel(session.id)}
+                                >
+                                  Batalkan sesi
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="report-ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setCancelTarget(null);
+                                    setCancelReason('');
+                                  }}
+                                >
+                                  Batal
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setCancelTarget(session.id)}
+                              className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-report-text-3)] hover:text-[var(--color-hazard)]"
+                            >
+                              Batalkan sesi ini
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </li>
                   );
                 })}

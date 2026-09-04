@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Barbell } from '@phosphor-icons/react/dist/ssr';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/ui/empty-state';
-import { cn } from '@/lib/utils';
+import { DrillsSettingsClient, type DrillRow } from './drills-settings-client';
 
 export default async function DrillsSettingsPage() {
   const supabase = (await createServerSupabaseClient()) as SupabaseClient;
@@ -25,7 +25,7 @@ export default async function DrillsSettingsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organization_id, role')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -50,35 +50,34 @@ export default async function DrillsSettingsPage() {
     .order('category')
     .order('name');
 
+  const rows: DrillRow[] = (drills ?? []).map((drill) => ({
+    id: drill.id,
+    name: drill.name,
+    category: drill.category,
+    type: drill.type,
+    defaultTarget: drill.default_target,
+    unit: drill.unit,
+    isArchived: drill.is_archived,
+  }));
+
   return (
     <Shell>
-      <h1 className="font-[family-name:var(--font-display)] text-2xl text-[var(--color-report-text)] mb-6">
+      <p className="brut-label text-[var(--color-hazard)]">[ Settings / Drills ]</p>
+      <h1 className="brut-heading mt-2 text-2xl text-[var(--color-report-text)] mb-6">
         Drill library
       </h1>
-      <ul className="space-y-2">
-        {(drills ?? []).map((drill) => (
-          <li
-            key={drill.id}
-            className={cn(
-              'rounded-[var(--radius-panel)] border border-[var(--color-report-border)]',
-              'bg-[var(--color-report-surface)] px-4 py-4',
-            )}
-          >
-            <p className="font-[family-name:var(--font-ui)] font-semibold text-[var(--color-report-text)]">
-              {drill.name}
-            </p>
-            <p className="text-sm text-[var(--color-report-text-3)] mt-1">
-              {drill.category} · {drill.type}
-              {drill.default_target != null ? ` · target ${drill.default_target}` : ''}
-              {drill.unit ? ` ${drill.unit}` : ''}
-            </p>
-          </li>
-        ))}
-      </ul>
+      <DrillsSettingsClient
+        drills={rows}
+        canManage={profile.role === 'admin'}
+      />
     </Shell>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-[100dvh] px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">{children}</div>;
+  return (
+    <div className="min-h-[100dvh] border-b-2 border-[var(--color-report-border)] px-4 py-6 md:px-8 md:py-8 max-w-2xl mx-auto">
+      {children}
+    </div>
+  );
 }

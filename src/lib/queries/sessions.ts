@@ -1,5 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { sessionSchema, type SessionInput } from '@/lib/validators/session';
+import {
+  sessionSchema,
+  recurringSessionSchema,
+  sessionCancelSchema,
+  type SessionInput,
+  type RecurringSessionInput,
+  type SessionCancelInput,
+} from '@/lib/validators/session';
+import { buildRecurringSessionStarts } from '@/lib/sessions/recurrence';
 import { getCoachTeamIds } from '@/lib/queries/dashboard';
 
 export type SessionStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
@@ -265,4 +273,117 @@ export async function getSessionById(
     attendanceCount: attendanceCount ?? 0,
     rosterCount: rosterCount ?? 0,
   };
+}
+
+export async function createRecurringSchedule(
+  supabase: SupabaseClient,
+  orgId: string,
+  coachId: string,
+  rawInput: RecurringSessionInput,
+): Promise<{ scheduleId: string; sessionCount: number } | { error: string }> {
+  const parsed = recurringSessionSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { error: 'Data jadwal tidak valid. Periksa kelas, hari, dan waktu.' };
+  }
+
+  const input = parsed.data;
+  const teamIds = await getCoachTeamIds(supabase, coachId);
+  if (teamIds.length > 0 && !teamIds.includes(input.teamId)) {
+    return {
+      error: 'Kelas tidak ditemukan atau Anda belum ditugaskan ke kelas ini.',
+    };
+  }
+
+  const starts = buildRecurringSessionStarts({
+    daysOfWeek: input.daysOfWeek,
+    startTime: input.startTime,
+    horizonWeeks: input.horizonWeeks,
+  });
+
+  if (starts.length === 0) {
+    return { error: 'Tidak ada sesi yang bisa dibuat dari jadwal ini.' };
+  }
+
+  const { data: schedule, error: scheduleError } = await supabase
+    .from('session_schedules')
+    .insert({
+      organization_id: orgId,
+      team_id: input.teamId,
+      days_of_week: input.daysOfWeek,
+      start_time: `${input.startTime}:00`,
+      location: input.location ?? null,
+      session_type: input.sessionType,
+      horizon_weeks: input.horizonWeeks,
+      created_by: coachId,
+    })
+    .select('id')
+    .single();
+
+  if (scheduleError || !schedule) {
+    return { error: 'Gagal menyimpan jadwal berulang. Coba lagi.' };
+  }
+
+  const rows = starts.map((scheduledStart) => ({
+    organization_id: orgId,
+    team_id: input.teamId,
+    scheduled_start: scheduledStart,
+    location: input.location ?? null,
+    session_type: input.sessionType,
+    status: 'scheduled' as const,
+    schedule_id: schedule.id,
+  }));
+
+  const { error: sessionsError } = await supabase.from('sessions').insert(rows);
+  if (sessionsError) {
+    await supabase.from('session_schedules').delete().eq('id', schedule.id);
+    return { error: 'Gagal membuat sesi dari jadwal. Coba lagi.' };
+  }
+
+  return { scheduleId: schedule.id, sessionCount: rows.length };
+}
+
+export async function cancelSession(
+  supabase: SupabaseClient,
+  orgId: string,
+  coachId: string,
+  sessionId: string,
+  rawInput: SessionCancelInput,
+): Promise<{ ok: true } | { error: string }> {
+  const parsed = sessionCancelSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { error: 'Alasan pembatalan wajib diisi.' };
+  }
+
+  const { data: session } = await supabase
+    .from('sessions')
+    .select('id, team_id, organization_id, status')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (!session || session.organization_id !== orgId) {
+    return { error: 'Sesi tidak ditemukan.' };
+  }
+
+  const teamIds = await getCoachTeamIds(supabase, coachId);
+  if (teamIds.length > 0 && !teamIds.includes(session.team_id as string)) {
+    return { error: 'Anda tidak ditugaskan ke kelas sesi ini.' };
+  }
+
+  if (session.status === 'cancelled') {
+    return { ok: true };
+  }
+
+  const { error } = await supabase
+    .from('sessions')
+    .update({
+      status: 'cancelled',
+      cancel_reason: parsed.data.cancelReason.trim(),
+    })
+    .eq('id', sessionId);
+
+  if (error) {
+    return { error: 'Gagal membatalkan sesi. Coba lagi.' };
+  }
+
+  return { ok: true };
 }

@@ -61,6 +61,6 @@ export default async function SessionsPage() {
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-[100dvh] px-4 py-6 md:px-8 md:py-8 max-w-3xl mx-auto">{children}</div>
+    <div className="min-h-[100dvh] border-b-2 border-[var(--color-report-border)] px-4 py-6 md:px-8 md:py-8 max-w-3xl mx-auto">{children}</div>
   );
 }

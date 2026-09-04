@@ -89,16 +89,29 @@ export default async function PlayersPage({ searchParams }: PageProps) {
 
   return (
     <PageShell>
-      <header className="mb-6">
-        <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)]">
-          {organization?.name ?? 'Akademi'}
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-report-text)] font-[family-name:var(--font-display)] mt-0.5">
-          Pemain
-        </h1>
-        <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-1">
-          {players.length} pemain aktif
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)]">
+            {organization?.name ?? 'Akademi'}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-report-text)] font-[family-name:var(--font-display)] mt-0.5">
+            Pemain
+          </h1>
+          <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-1">
+            {players.length} pemain aktif
+          </p>
+        </div>
+        <Link
+          href="/players/new"
+          className={cn(
+            'inline-flex items-center justify-center h-12 px-5',
+            'border-2 border-[var(--color-hazard)] bg-[var(--color-hazard)] text-[var(--color-phosphor)]',
+            'font-mono text-xs font-semibold uppercase tracking-[0.1em]',
+            'hover:bg-transparent hover:text-[var(--color-hazard)] transition-colors',
+          )}
+        >
+          Tambah pemain
+        </Link>
       </header>
 
       <form method="GET" className={cn(cardClass, 'p-4 mb-4 space-y-3')}>
