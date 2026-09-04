@@ -112,8 +112,7 @@ function HeroSection({
         <div
           className={cn(
             'relative w-[96px] h-[96px] md:w-[120px] md:h-[120px] shrink-0',
-            'rounded-full',
-            'ring-[3px] ring-[var(--color-leather)]/60 ring-offset-2 ring-offset-[var(--color-field-bg)]',
+            'border-2 border-[var(--color-hazard)]',
             'overflow-hidden bg-[var(--color-field-surface)]',
           )}
         >
@@ -219,10 +218,10 @@ export function PlayerCardClient({
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                'w-11 h-11 rounded-xl flex items-center justify-center',
-                streak >= 10
-                  ? 'bg-[var(--color-gold)]/15 text-[var(--color-gold)]'
-                  : 'bg-[var(--color-leather)]/10 text-[var(--color-leather)]',
+                'w-11 h-11 rounded-none border flex items-center justify-center',
+                  streak >= 10
+                    ? 'border-[var(--color-gold)] bg-[var(--color-gold)]/15 text-[var(--color-gold)]'
+                    : 'border-[var(--color-field-border)] bg-[var(--color-field-raised)] text-[var(--color-hazard)]',
               )}
             >
               <FireSimple size={24} weight="fill" />
@@ -249,10 +248,10 @@ export function PlayerCardClient({
               <div
                 key={i}
                 className={cn(
-                  'w-2.5 h-2.5 rounded-full transition-colors',
+                  'w-2.5 h-2.5 transition-colors',
                   attended
                     ? 'bg-[var(--color-made)]'
-                    : 'border-2 border-[var(--color-field-border)] bg-transparent',
+                    : 'border border-[var(--color-field-border)] bg-transparent',
                 )}
                 title={attended ? 'Hadir' : 'Tidak hadir'}
               />
@@ -319,12 +318,12 @@ export function PlayerCardClient({
 
             <div className="flex items-center justify-center gap-5 -mt-2">
               <span className="flex items-center gap-1.5 text-xs font-[family-name:var(--font-ui)] text-[var(--color-leather)]">
-                <span className="w-4 h-0.5 bg-[var(--color-leather)] rounded-full" />
+                <span className="w-4 h-0.5 bg-[var(--color-hazard)]" />
                 Sekarang
               </span>
               <span className="flex items-center gap-1.5 text-xs font-[family-name:var(--font-ui)] text-[var(--color-field-text-3)]">
                 <span
-                  className="w-4 h-0.5 bg-[var(--color-field-text-3)] rounded-full opacity-60"
+                  className="w-4 h-0.5 bg-[var(--color-field-text-3)] opacity-60"
                   style={{
                     backgroundImage:
                       'repeating-linear-gradient(90deg, var(--color-field-text-3) 0 3px, transparent 3px 6px)',
@@ -489,10 +488,10 @@ export function PlayerCardClient({
               >
                 <div
                   className={cn(
-                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                    'w-9 h-9 rounded-none border flex items-center justify-center shrink-0',
                     badge.earned
-                      ? 'bg-[var(--color-gold)]/15 text-[var(--color-gold)]'
-                      : 'bg-[var(--color-field-surface)] text-[var(--color-field-text-3)]',
+                      ? 'border-[var(--color-gold)]/40 bg-[var(--color-gold)]/15 text-[var(--color-gold)]'
+                      : 'border-[var(--color-field-border)] bg-[var(--color-field-surface)] text-[var(--color-field-text-3)]',
                   )}
                 >
                   {badge.earned ? (

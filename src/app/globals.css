@@ -10,13 +10,13 @@
   --color-field-text-2: #9BAABC;
   --color-field-text-3: #64768A;
 
-  /* Report (light theme) */
-  --color-report-bg: #EDF0F3;
-  --color-report-surface: #FFFFFF;
-  --color-report-border: #D6DDE4;
-  --color-report-text: #101A26;
-  --color-report-text-2: #4C5D70;
-  --color-report-text-3: #7C8CA0;
+  /* Report (Swiss industrial print — brutalist light) */
+  --color-report-bg: #F4F4F0;
+  --color-report-surface: #F4F4F0;
+  --color-report-border: #111111;
+  --color-report-text: #050505;
+  --color-report-text-2: #333333;
+  --color-report-text-3: #666666;
 
   /* Action & meaning */
   --color-leather: #EE6A1E;
@@ -42,6 +42,12 @@
   /* Typography */
   --font-display: "Archivo", system-ui, sans-serif;
   --font-ui: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Brutalist telemetry */
+  --color-hazard: #E61919;
+  --color-phosphor: #EAEAEA;
+  --color-terminal-bg: #0A0A0A;
 
   /* Spacing (4px base) */
   --spacing-sp-1: 4px;
@@ -53,11 +59,11 @@
   --spacing-sp-7: 48px;
   --spacing-sp-8: 64px;
 
-  /* Border radius */
-  --radius-card: 14px;
-  --radius-button: 12px;
-  --radius-panel: 8px;
-  --radius-chip: 999px;
+  /* Border radius — brutalist: 90° corners only */
+  --radius-card: 0px;
+  --radius-button: 0px;
+  --radius-panel: 0px;
+  --radius-chip: 0px;
 
   /* Touch targets */
   --size-touch-min: 48px;
@@ -77,8 +83,8 @@
   }
 
   .field-theme {
-    background-color: var(--color-field-bg);
-    color: var(--color-field-text);
+    background-color: var(--color-terminal-bg);
+    color: var(--color-phosphor);
   }
 
   .report-theme {
@@ -86,10 +92,69 @@
     color: var(--color-report-text);
   }
 
+  .brut-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .brut-panel {
+    border: 1px solid var(--color-field-border);
+    background-color: var(--color-field-surface);
+  }
+
+  .report-theme .brut-panel {
+    border-color: var(--color-report-border);
+    background-color: var(--color-report-surface);
+  }
+
+  .brut-heading {
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 0.9;
+    text-transform: uppercase;
+  }
+
   /* Tabular numerals for all score displays */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+.auth-telemetry {
+  background-color: var(--color-terminal-bg);
+  color: var(--color-phosphor);
+}
+
+.auth-telemetry .telemetry-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.14) 2px,
+    rgba(0, 0, 0, 0.14) 4px
+  );
+  opacity: 0.35;
+}
+
+.auth-telemetry .telemetry-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @layer utilities {

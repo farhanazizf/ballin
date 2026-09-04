@@ -21,8 +21,7 @@ function Skeleton({
 export default function DashboardLoading() {
   const cardClass = cn(
     'bg-[var(--color-report-surface)]',
-    'border border-[var(--color-report-border)]',
-    'rounded-[var(--radius-panel)]',
+    'border-2 border-[var(--color-report-border)]',
     'p-5 md:p-6',
   );
 
@@ -55,8 +54,8 @@ export default function DashboardLoading() {
           </div>
           <Skeleton className="h-3.5 w-52 mb-3" />
           <div className="flex gap-2 mb-5">
-            <Skeleton className="h-6 w-24 rounded-full" />
-            <Skeleton className="h-6 w-14 rounded-full" />
+            <Skeleton className="h-6 w-24 rounded-none" />
+            <Skeleton className="h-6 w-14 rounded-none" />
           </div>
           <Skeleton className="h-11 w-full md:w-36 rounded-[var(--radius-button)]" />
         </div>
@@ -77,7 +76,7 @@ export default function DashboardLoading() {
         {/* Panel 3 — Perlu perhatian */}
         <div className={cn(cardClass, 'md:col-span-1 md:row-start-2')}>
           <div className="flex items-center gap-2 mb-4">
-            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-5 w-5 rounded-none" />
             <Skeleton className="h-3.5 w-28" />
           </div>
           <div className="space-y-0 divide-y divide-[var(--color-report-border)]">

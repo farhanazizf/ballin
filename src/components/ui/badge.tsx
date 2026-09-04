@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
   [
-    'inline-flex items-center gap-1 font-[family-name:var(--font-ui)] font-medium',
-    'rounded-[var(--radius-chip)]',
+    'inline-flex items-center gap-1 font-mono font-medium uppercase tracking-[0.08em]',
+    'rounded-none border',
     'select-none whitespace-nowrap',
   ].join(' '),
   {

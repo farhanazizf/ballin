@@ -13,19 +13,20 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, hint, theme = 'field', id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s/g, '-');
-    
-    const themeStyles = theme === 'field' 
-      ? 'bg-[var(--color-field-surface)] border-[var(--color-field-border)] text-[var(--color-field-text)] placeholder:text-[var(--color-field-text-3)] focus:border-[var(--color-leather)]'
-      : 'bg-[var(--color-report-surface)] border-[var(--color-report-border)] text-[var(--color-report-text)] placeholder:text-[var(--color-report-text-3)] focus:border-[var(--color-leather)]';
+
+    const themeStyles =
+      theme === 'field'
+        ? 'bg-[var(--color-terminal-bg)] border-[var(--color-field-border)] text-[var(--color-phosphor)] placeholder:text-[var(--color-field-text-3)] focus:border-[var(--color-hazard)]'
+        : 'bg-[var(--color-report-bg)] border-[var(--color-report-border)] text-[var(--color-report-text)] placeholder:text-[var(--color-report-text-3)] focus:border-[var(--color-hazard)]';
 
     return (
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         {label && (
           <label
             htmlFor={inputId}
             className={cn(
-              'text-sm font-medium font-[family-name:var(--font-ui)]',
-              theme === 'field' ? 'text-[var(--color-field-text-2)]' : 'text-[var(--color-report-text-2)]'
+              'brut-label',
+              theme === 'field' ? 'text-[var(--color-field-text-3)]' : 'text-[var(--color-report-text-3)]',
             )}
           >
             {label}
@@ -34,34 +35,35 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           id={inputId}
           className={cn(
-            'h-12 w-full px-4 rounded-[var(--radius-button)] border',
-            'font-[family-name:var(--font-ui)] text-base',
-            'transition-colors duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]/30',
+            'h-12 w-full rounded-none border px-4',
+            'font-mono text-sm tracking-[0.04em]',
+            'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]',
             'disabled:opacity-40 disabled:cursor-not-allowed',
             themeStyles,
-            error && 'border-[var(--color-miss)] focus:border-[var(--color-miss)] focus:ring-[var(--color-miss)]/20',
-            className
+            error && 'border-[var(--color-hazard)] focus:ring-[var(--color-hazard)]',
+            className,
           )}
           ref={ref}
           {...props}
         />
         {hint && !error && (
-          <p className={cn(
-            'text-xs font-[family-name:var(--font-ui)]',
-            theme === 'field' ? 'text-[var(--color-field-text-3)]' : 'text-[var(--color-report-text-3)]'
-          )}>
+          <p
+            className={cn(
+              'font-mono text-[10px] uppercase tracking-[0.08em]',
+              theme === 'field' ? 'text-[var(--color-field-text-3)]' : 'text-[var(--color-report-text-3)]',
+            )}
+          >
             {hint}
           </p>
         )}
         {error && (
-          <p className="text-xs text-[var(--color-miss)] font-[family-name:var(--font-ui)]">
-            {error}
+          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-hazard)]">
+            /// {error}
           </p>
         )}
       </div>
     );
-  }
+  },
 );
 Input.displayName = 'Input';
 

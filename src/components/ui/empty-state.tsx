@@ -20,21 +20,21 @@ export function EmptyState({ icon, title, description, action, theme = 'report',
       className
     )}>
       <div className={cn(
-        'w-14 h-14 rounded-2xl flex items-center justify-center mb-5',
+        'w-14 h-14 rounded-none border flex items-center justify-center mb-5',
         theme === 'field' 
-          ? 'bg-[var(--color-field-surface)] text-[var(--color-field-text-3)]' 
-          : 'bg-[var(--color-report-bg)] text-[var(--color-report-text-3)]'
+          ? 'border-[var(--color-field-border)] bg-[var(--color-field-surface)] text-[var(--color-field-text-3)]' 
+          : 'border-[var(--color-report-border)] bg-[var(--color-report-bg)] text-[var(--color-report-text-3)]'
       )}>
         {icon}
       </div>
       <h3 className={cn(
-        'font-[family-name:var(--font-display)] text-lg font-semibold mb-2',
-        theme === 'field' ? 'text-[var(--color-field-text)]' : 'text-[var(--color-report-text)]'
+        'brut-heading text-lg mb-2',
+        theme === 'field' ? 'text-[var(--color-phosphor)]' : 'text-[var(--color-report-text)]'
       )}>
         {title}
       </h3>
       <p className={cn(
-        'font-[family-name:var(--font-ui)] text-sm max-w-[320px] leading-relaxed',
+        'font-mono text-xs uppercase tracking-[0.06em] max-w-[320px] leading-relaxed',
         theme === 'field' ? 'text-[var(--color-field-text-3)]' : 'text-[var(--color-report-text-3)]'
       )}>
         {description}

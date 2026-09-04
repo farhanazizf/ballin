@@ -28,7 +28,7 @@ export default function PlayersLoading() {
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3.5 w-48" />
-              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-none" />
             </div>
           </div>
         ))}

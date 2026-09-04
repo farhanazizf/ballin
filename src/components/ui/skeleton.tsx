@@ -8,7 +8,7 @@ export function Skeleton({ className, theme = 'report', ...props }: SkeletonProp
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-panel)]',
+        'rounded-none',
         theme === 'field'
           ? 'bg-[var(--color-field-surface)] animate-pulse'
           : 'bg-[var(--color-report-border)]/50 animate-pulse',

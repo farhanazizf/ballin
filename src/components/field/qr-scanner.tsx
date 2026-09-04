@@ -66,7 +66,7 @@ export function QrScanner({ onScan, onError, className }: QrScannerProps) {
   return (
     <div className={cn('relative overflow-hidden rounded-[var(--radius-panel)] bg-black', className)}>
       <video ref={videoRef} className="w-full aspect-[4/3] object-cover" muted playsInline />
-      <div className="absolute inset-0 pointer-events-none border-2 border-[var(--color-made)]/40 m-8 rounded-xl" />
+      <div className="absolute inset-0 pointer-events-none border-2 border-[var(--color-made)]/40 m-8 rounded-none" />
       {!active && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-sm text-white font-[family-name:var(--font-ui)]">
           Membuka kamera...

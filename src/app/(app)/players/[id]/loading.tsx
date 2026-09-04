@@ -18,7 +18,7 @@ export default function PlayerDetailLoading() {
         <div className="flex-1 space-y-2">
           <Skeleton className="h-7 w-40" />
           <Skeleton className="h-4 w-56" />
-          <Skeleton className="h-5 w-24 rounded-full mt-2" />
+          <Skeleton className="h-5 w-24 rounded-none mt-2" />
         </div>
       </div>
 
