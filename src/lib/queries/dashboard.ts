@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { countConsecutiveAbsences } from '@/lib/queries/dashboard-alerts';
 
 export type UpcomingSession = {
   id: string;
@@ -228,9 +229,10 @@ export async function getAttentionPlayers(
 
   const { data: attendance } = await supabase
     .from('attendance')
-    .select('player_id, status')
+    .select('player_id, status, session_date')
     .in('session_id', sessionIds)
-    .in('player_id', playerIds);
+    .in('player_id', playerIds)
+    .order('session_date', { ascending: false });
 
   const { data: players } = await supabase
     .from('players')
@@ -244,17 +246,26 @@ export async function getAttentionPlayers(
     ]),
   );
 
+  const recordsByPlayer = new Map<string, Array<{ status: string; sessionDate: string }>>();
   const absentCount = new Map<string, number>();
   const presentCount = new Map<string, number>();
   const totalCount = new Map<string, number>();
 
   for (const row of attendance ?? []) {
     const playerId = row.player_id as string;
+    const sessionDate = row.session_date as string;
+    const status = row.status as string;
+
+    if (!recordsByPlayer.has(playerId)) {
+      recordsByPlayer.set(playerId, []);
+    }
+    recordsByPlayer.get(playerId)!.push({ status, sessionDate });
+
     totalCount.set(playerId, (totalCount.get(playerId) ?? 0) + 1);
-    if (row.status === 'absent') {
+    if (status === 'absent') {
       absentCount.set(playerId, (absentCount.get(playerId) ?? 0) + 1);
     }
-    if (row.status === 'present' || row.status === 'late') {
+    if (status === 'present' || status === 'late') {
       presentCount.set(playerId, (presentCount.get(playerId) ?? 0) + 1);
     }
   }
@@ -262,11 +273,22 @@ export async function getAttentionPlayers(
   const results: AttentionPlayer[] = [];
 
   for (const playerId of playerIds) {
-    const absences = absentCount.get(playerId) ?? 0;
     const total = totalCount.get(playerId) ?? 0;
     const present = presentCount.get(playerId) ?? 0;
     const name = playerNames.get(playerId) ?? 'Pemain';
+    const records = recordsByPlayer.get(playerId) ?? [];
+    const consecutive = countConsecutiveAbsences(records);
 
+    if (consecutive >= 3) {
+      results.push({
+        id: playerId,
+        name,
+        reason: `Tidak hadir ${consecutive} sesi berturut-turut`,
+      });
+      continue;
+    }
+
+    const absences = absentCount.get(playerId) ?? 0;
     if (absences >= 3) {
       results.push({
         id: playerId,

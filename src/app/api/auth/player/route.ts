@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, pin } = parsed.data;
+    const { username: rawUsername, pin } = parsed.data;
+    const username = rawUsername.trim().toLowerCase();
     const admin = createAdminClient();
 
     const { data: cred, error: credError } = await admin

@@ -11,16 +11,15 @@ import {
 } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { User, CircleNotch, Timer } from '@phosphor-icons/react';
-import Image from 'next/image';
+import { CircleNotch } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { playerLoginSchema, type PlayerLoginInput } from '@/lib/validators/auth';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 const PIN_LENGTH = 6;
+const UNIT_ID = 'DBA-KRW';
+const REV = 'REV 1.0';
 
 async function handlePlayerLogin(data: PlayerLoginInput) {
   const res = await fetch('/api/auth/player', {
@@ -38,23 +37,10 @@ async function handlePlayerLogin(data: PlayerLoginInput) {
   return body;
 }
 
-const stagger = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.06 },
-  },
-};
+function pinDigits(value: string): string[] {
+  return Array.from({ length: PIN_LENGTH }, (_, i) => value[i] ?? '');
+}
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 10 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const },
-  },
-};
-
-/* ── PIN Input Component ── */
 function PinInput({
   value,
   onChange,
@@ -69,7 +55,7 @@ function PinInput({
   onComplete?: () => void;
 }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = value.padEnd(PIN_LENGTH, '').split('').slice(0, PIN_LENGTH);
+  const digits = pinDigits(value);
 
   const focusInput = useCallback((index: number) => {
     const clamped = Math.max(0, Math.min(index, PIN_LENGTH - 1));
@@ -84,7 +70,7 @@ function PinInput({
         onComplete?.();
       }
     },
-    [onChange, onComplete]
+    [onChange, onComplete],
   );
 
   function handleChange(index: number, e: ChangeEvent<HTMLInputElement>) {
@@ -103,7 +89,7 @@ function PinInput({
     if (e.key === 'Backspace') {
       e.preventDefault();
       const next = [...digits];
-      if (digits[index] && digits[index] !== ' ') {
+      if (digits[index]) {
         next[index] = '';
         updatePin(next);
       } else if (index > 0) {
@@ -125,46 +111,60 @@ function PinInput({
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, PIN_LENGTH);
     if (!pasted) return;
 
-    const next = pasted.padEnd(PIN_LENGTH, ' ').split('').slice(0, PIN_LENGTH);
-    updatePin(next.map((c) => (c === ' ' ? '' : c)));
+    const next = pinDigits(pasted);
+    updatePin(next);
     focusInput(Math.min(pasted.length, PIN_LENGTH - 1));
   }
 
   return (
-    <div className="flex gap-2 sm:gap-3 justify-center" role="group" aria-label="Masukkan PIN 6 digit">
+    <div
+      className={cn(
+        'grid grid-cols-6 gap-px bg-[var(--color-field-border)]',
+        hasError && 'outline outline-1 outline-[var(--color-hazard)]',
+      )}
+      role="group"
+      aria-label="Masukkan PIN 6 digit"
+    >
       {digits.map((digit, i) => (
-        <input
-          key={i}
-          ref={(el) => { inputRefs.current[i] = el; }}
-          type="text"
-          inputMode="numeric"
-          autoComplete={i === 0 ? 'one-time-code' : 'off'}
-          maxLength={1}
-          value={digit === ' ' ? '' : digit}
-          disabled={disabled}
-          aria-label={`Digit ${i + 1} dari ${PIN_LENGTH}`}
-          onChange={(e) => handleChange(i, e)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={i === 0 ? handlePaste : undefined}
-          onFocus={(e) => e.target.select()}
-          className={cn(
-            'h-14 w-12 sm:w-14 rounded-[var(--radius-button)] border text-center',
-            'font-[family-name:var(--font-display)] text-2xl font-semibold tabular-nums',
-            'bg-[var(--color-field-surface)] text-[var(--color-field-text)]',
-            'transition-all duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]/40 focus:border-[var(--color-leather)]',
-            'disabled:opacity-40 disabled:cursor-not-allowed',
-            hasError
-              ? 'border-[var(--color-miss)] focus:border-[var(--color-miss)] focus:ring-[var(--color-miss)]/20'
-              : 'border-[var(--color-field-border)]'
+        <div key={i} className="relative bg-[var(--color-field-border)]">
+          <input
+            ref={(el) => {
+              inputRefs.current[i] = el;
+            }}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete={i === 0 ? 'one-time-code' : 'off'}
+            maxLength={1}
+            value={digit}
+            disabled={disabled}
+            aria-label={`Digit ${i + 1} dari ${PIN_LENGTH}`}
+            onChange={(e) => handleChange(i, e)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            onPaste={i === 0 ? handlePaste : undefined}
+            onFocus={(e) => e.target.select()}
+            className={cn(
+              'h-[var(--size-touch-min)] w-full border-0 bg-[var(--color-terminal-bg)] text-center',
+              'font-mono text-xl font-semibold tabular-nums text-[var(--color-phosphor)]',
+              'focus:outline-none focus:bg-[var(--color-field-bg)]',
+              'focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]',
+              'disabled:opacity-40 disabled:cursor-not-allowed',
+            )}
+          />
+          {!digit && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 flex items-center justify-center font-mono text-sm text-[var(--color-field-text-3)]"
+            >
+              _
+            </span>
           )}
-        />
+        </div>
       ))}
     </div>
   );
 }
 
-/* ── Player Login Page ── */
 export default function PlayerLoginPage() {
   const router = useRouter();
   const [pin, setPin] = useState('');
@@ -176,11 +176,13 @@ export default function PlayerLoginPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitted },
     setValue,
   } = useForm<PlayerLoginInput>({
     resolver: zodResolver(playerLoginSchema),
     defaultValues: { username: '', pin: '' },
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
   });
 
   const startLockoutTimer = useCallback((seconds: number) => {
@@ -199,7 +201,7 @@ export default function PlayerLoginPage() {
 
   function onPinChange(newPin: string) {
     setPin(newPin);
-    setValue('pin', newPin, { shouldValidate: false });
+    setValue('pin', newPin, { shouldValidate: isSubmitted });
   }
 
   function onSubmit(data: PlayerLoginInput) {
@@ -207,6 +209,7 @@ export default function PlayerLoginPage() {
     startTransition(async () => {
       try {
         const result = await handlePlayerLogin(data);
+        router.refresh();
         router.push(result.redirect ?? '/card');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Terjadi kesalahan. Coba lagi.';
@@ -217,8 +220,10 @@ export default function PlayerLoginPage() {
           startLockoutTimer(parseInt(lockMatch[1], 10) * 60);
         }
 
-        setPin('');
-        setValue('pin', '', { shouldValidate: false });
+        if (/pin/i.test(msg)) {
+          setPin('');
+          setValue('pin', '', { shouldValidate: false });
+        }
       }
     });
   }
@@ -229,180 +234,196 @@ export default function PlayerLoginPage() {
     : null;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center px-6 py-12">
-      <motion.div
-        className="w-full max-w-sm"
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-      >
-        {/* Logo mark */}
-        <motion.div variants={fadeUp} className="mb-10">
-          <Image
-            src="/logo-icon.svg"
-            alt="Ballin"
-            width={48}
-            height={48}
-            priority
-          />
-        </motion.div>
-
-        {/* Heading */}
-        <motion.div variants={fadeUp}>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--color-field-text)]">
-            Masuk ke kartu pemain
-          </h1>
-          <p className="mt-2 text-sm text-[var(--color-field-text-2)] font-[family-name:var(--font-ui)]">
-            Masukkan username dan PIN dari coach kamu.
-          </p>
-        </motion.div>
-
-        <motion.form
-          variants={fadeUp}
-          onSubmit={(e) => { handleSubmit(onSubmit)(e); }}
-          className="mt-8 space-y-6"
-          noValidate
+    <main className="grid min-h-[100dvh] lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+      {/* ── Telemetry panel ── */}
+      <section className="relative flex flex-col justify-between border-b border-[var(--color-field-border)] p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-10">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-6 top-6 font-mono text-[10px] tracking-[0.12em] text-[var(--color-field-text-3)] lg:right-10 lg:top-10"
         >
-          {/* Username */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="username"
-              className="text-sm font-medium text-[var(--color-field-text-2)] font-[family-name:var(--font-ui)]"
-            >
-              Username
-            </label>
-            <div className="relative">
-              <User
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-field-text-3)]"
-                size={20}
-                weight="regular"
-              />
-              <input
-                id="username"
-                type="text"
-                autoComplete="username"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="nama.pemain"
-                disabled={isPending || isLocked}
-                {...register('username')}
-                className={cn(
-                  'h-12 w-full rounded-[var(--radius-button)] border bg-[var(--color-field-surface)] pl-11 pr-4',
-                  'font-[family-name:var(--font-ui)] text-base text-[var(--color-field-text)]',
-                  'placeholder:text-[var(--color-field-text-3)]',
-                  'transition-colors duration-150',
-                  'focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]/30 focus:border-[var(--color-leather)]',
-                  'disabled:opacity-40 disabled:cursor-not-allowed',
-                  errors.username
-                    ? 'border-[var(--color-miss)] focus:border-[var(--color-miss)] focus:ring-[var(--color-miss)]/20'
-                    : 'border-[var(--color-field-border)]'
-                )}
-              />
-            </div>
-            {errors.username && (
-              <p className="text-xs text-[var(--color-miss)] font-[family-name:var(--font-ui)]">
-                {errors.username.message}
-              </p>
-            )}
+          +
+        </span>
+
+        <header>
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-hazard)]">
+            [ AUTH / PLAYER ]
+          </p>
+          <h1 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(2.75rem,11vw,6.5rem)] font-black uppercase leading-[0.88] tracking-[-0.05em] text-[var(--color-phosphor)]">
+            Kartu
+            <br />
+            pemain
+          </h1>
+          <p className="mt-5 max-w-[34ch] font-[family-name:var(--font-ui)] text-sm leading-relaxed text-[var(--color-field-text-2)]">
+            Username dan PIN dari coach. Tanpa peringkat, tanpa data teman.
+          </p>
+        </header>
+
+        <dl className="mt-10 space-y-0 font-mono text-[10px] uppercase tracking-[0.1em] lg:mt-0">
+          <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-[var(--color-field-border)] py-3">
+            <dt className="text-[var(--color-field-text-3)]">Unit</dt>
+            <dd className="text-right text-[var(--color-phosphor)]">{UNIT_ID}</dd>
           </div>
-
-          {/* PIN */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-[var(--color-field-text-2)] font-[family-name:var(--font-ui)]">
-              PIN
-            </label>
-            <PinInput
-              value={pin}
-              onChange={onPinChange}
-              disabled={isPending || isLocked}
-              hasError={!!errors.pin}
-              onComplete={() => {
-                const submitBtn = document.getElementById('player-submit');
-                submitBtn?.focus();
-              }}
-            />
-            {errors.pin && (
-              <p className="text-xs text-center text-[var(--color-miss)] font-[family-name:var(--font-ui)]">
-                {errors.pin.message}
-              </p>
-            )}
+          <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-[var(--color-field-border)] py-3">
+            <dt className="text-[var(--color-field-text-3)]">Build</dt>
+            <dd className="text-right text-[var(--color-phosphor)]">{REV}</dd>
           </div>
+          <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-b border-[var(--color-field-border)] py-3">
+            <dt className="text-[var(--color-field-text-3)]">Status</dt>
+            <dd className="text-right text-[var(--color-phosphor)]">
+              {isLocked ? (
+                <samp className="text-[var(--color-hazard)]">LOCKED</samp>
+              ) : (
+                <samp>READY</samp>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
-          {/* Server error / lockout */}
-          {serverError && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-[var(--radius-panel)] border border-[var(--color-miss)]/20 bg-[var(--color-miss)]/8 px-4 py-3"
-            >
-              <p className="text-sm text-[var(--color-miss)] font-[family-name:var(--font-ui)]">
-                {serverError}
-              </p>
-            </motion.div>
-          )}
+      {/* ── Credential terminal ── */}
+      <section className="flex flex-col">
+        <div className="border-b border-[var(--color-field-border)] px-6 py-4 sm:px-8">
+          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-field-text-3)]">
+            &gt;&gt;&gt; credentials / terminal
+          </p>
+        </div>
 
-          {isLocked && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 rounded-[var(--radius-panel)] border border-[var(--color-field-border)] bg-[var(--color-field-raised)] px-4 py-3"
-            >
-              <Timer
-                size={20}
-                weight="bold"
-                className="shrink-0 text-[var(--color-field-text-3)]"
-              />
-              <p className="text-sm text-[var(--color-field-text-2)] font-[family-name:var(--font-ui)]">
-                Coba lagi dalam{' '}
-                <span className="font-[family-name:var(--font-display)] font-semibold tabular-nums text-[var(--color-field-text)]">
-                  {lockDisplay}
-                </span>
-              </p>
-            </motion.div>
-          )}
-
-          {/* Submit */}
-          <Button
-            id="player-submit"
-            type="submit"
-            variant="primary"
-            size="field"
-            disabled={isPending || isLocked}
-            className="w-full"
+        <div className="flex flex-1 flex-col px-6 py-6 sm:px-8">
+          <form
+            onSubmit={(e) => {
+              handleSubmit(onSubmit)(e);
+            }}
+            className="flex flex-1 flex-col gap-px bg-[var(--color-field-border)]"
+            noValidate
           >
-            {isPending ? (
-              <>
-                <CircleNotch
-                  size={22}
-                  weight="bold"
-                  className="animate-spin"
+            {/* Username cell */}
+            <div className="bg-[var(--color-field-surface)] p-4">
+              <label
+                htmlFor="username"
+                className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-field-text-3)]"
+              >
+                Username
+              </label>
+              <div className="mt-2 border border-[var(--color-field-border)] bg-[var(--color-terminal-bg)]">
+                <input
+                  id="username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="rizky"
+                  disabled={isPending || isLocked}
+                  {...register('username')}
+                  className={cn(
+                    'h-[var(--size-touch-min)] w-full border-0 bg-transparent px-4',
+                    'font-mono text-sm tracking-[0.06em] text-[var(--color-phosphor)] lowercase',
+                    'placeholder:text-[var(--color-field-text-3)] placeholder:normal-case',
+                    'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]',
+                    'disabled:opacity-40 disabled:cursor-not-allowed',
+                  )}
                 />
-                <span>Memproses...</span>
-              </>
-            ) : (
-              'Masuk'
-            )}
-          </Button>
-        </motion.form>
+              </div>
+              {errors.username && (
+                <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-hazard)]">
+                  /// {errors.username.message}
+                </p>
+              )}
+            </div>
 
-        {/* Coach login link */}
-        <motion.div variants={fadeUp} className="mt-8 text-center">
-          <Link
-            href="/login"
-            className={cn(
-              'inline-block text-sm font-medium text-[var(--color-field-text-3)]',
-              'font-[family-name:var(--font-ui)]',
-              'transition-colors duration-150',
-              'hover:text-[var(--color-field-text-2)]',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus)]',
-              'rounded-[var(--radius-panel)] px-3 py-2 -mx-3'
+            {/* PIN cell */}
+            <div className="bg-[var(--color-field-surface)] p-4">
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <label className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-field-text-3)]">
+                  Pin 6 digit
+                </label>
+                <data
+                  value={pin.length}
+                  className="font-mono text-[10px] uppercase tracking-[0.1em] tabular-nums text-[var(--color-phosphor)]"
+                >
+                  {String(pin.length).padStart(2, '0')}/{PIN_LENGTH}
+                </data>
+              </div>
+              <PinInput
+                value={pin}
+                onChange={onPinChange}
+                disabled={isPending || isLocked}
+                hasError={!!errors.pin}
+                onComplete={() => {
+                  document.getElementById('player-submit')?.focus();
+                }}
+              />
+              {errors.pin && (
+                <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-hazard)]">
+                  /// {errors.pin.message}
+                </p>
+              )}
+            </div>
+
+            {/* Error / lockout cell */}
+            {(serverError || isLocked) && (
+              <div className="border-t-2 border-[var(--color-hazard)] bg-[var(--color-field-surface)] p-4">
+                {serverError && (
+                  <output className="block font-mono text-[11px] leading-relaxed tracking-[0.04em] text-[var(--color-hazard)]">
+                    ERR // {serverError}
+                  </output>
+                )}
+                {isLocked && (
+                  <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-field-text-2)]">
+                    Retry in{' '}
+                    <samp className="text-[var(--color-phosphor)] tabular-nums">{lockDisplay}</samp>
+                  </p>
+                )}
+              </div>
             )}
-          >
-            Masuk sebagai coach
-          </Link>
-        </motion.div>
-      </motion.div>
-    </div>
+
+            {/* Submit cell */}
+            <div className="bg-[var(--color-field-surface)] p-4">
+              <button
+                id="player-submit"
+                type="submit"
+                disabled={isPending || isLocked}
+                className={cn(
+                  'flex h-[var(--size-touch-primary)] w-full items-center justify-center gap-3',
+                  'border-2 border-[var(--color-hazard)] bg-[var(--color-hazard)]',
+                  'font-mono text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-phosphor)]',
+                  'transition-colors duration-200',
+                  'hover:bg-transparent hover:text-[var(--color-hazard)]',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-phosphor)]',
+                  'active:translate-y-px',
+                  'disabled:pointer-events-none disabled:opacity-40',
+                )}
+              >
+                {isPending ? (
+                  <>
+                    <CircleNotch size={20} weight="bold" className="animate-spin" />
+                    Processing
+                  </>
+                ) : (
+                  '>>> Masuk ke kartu'
+                )}
+              </button>
+            </div>
+          </form>
+
+          <hr className="my-6 border-[var(--color-field-border)]" />
+
+          <p className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-field-text-3)]">
+            <Link
+              href="/login"
+              className="text-[var(--color-field-text-2)] underline decoration-[var(--color-field-border)] underline-offset-4 transition-colors hover:text-[var(--color-phosphor)] hover:decoration-[var(--color-hazard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-phosphor)]"
+            >
+              Masuk sebagai coach
+            </Link>
+          </p>
+        </div>
+
+        <footer className="mt-auto border-t border-[var(--color-field-border)] px-6 py-3 sm:px-8">
+          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--color-field-text-3)]">
+            Dynasty Basketball Academy · Karawang · © Ballin
+          </p>
+        </footer>
+      </section>
+    </main>
   );
 }

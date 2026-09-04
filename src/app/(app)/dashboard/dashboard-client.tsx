@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDots,
@@ -12,6 +12,7 @@ import {
   Barbell,
   CalendarBlank,
   ChartBar,
+  X,
 } from '@phosphor-icons/react';
 import {
   BarChart,
@@ -31,6 +32,12 @@ import type {
   UpcomingSession,
   WeeklyAttendance,
 } from '@/lib/queries/dashboard';
+import {
+  buildDashboardAlerts,
+  dismissAlert,
+  readDismissedAlertIds,
+  type DashboardAlert,
+} from '@/lib/queries/dashboard-alerts';
 
 export type DashboardClientProps = {
   orgName: string;
@@ -66,8 +73,7 @@ function sessionStatusLabel(status: UpcomingSession['status']): string {
 
 const cardClass = cn(
   'bg-[var(--color-report-surface)]',
-  'border border-[var(--color-report-border)]',
-  'rounded-[var(--radius-panel)]',
+  'border-2 border-[var(--color-report-border)]',
   'p-5 md:p-6',
 );
 
@@ -89,9 +95,9 @@ function DrillTooltip({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-panel)] px-3 py-2 text-xs shadow-sm',
-        'bg-[var(--color-report-surface)] border border-[var(--color-report-border)]',
-        'font-[family-name:var(--font-ui)]',
+        'border-2 px-3 py-2 text-xs',
+        'bg-[var(--color-report-surface)] border-[var(--color-report-border)]',
+        'font-mono uppercase tracking-[0.06em]',
       )}
     >
       <span className="text-[var(--color-report-text)]">{category}</span>
@@ -107,6 +113,103 @@ function getLowCategories(items: DrillDistributionItem[]): Set<string> {
   const sorted = [...items].sort((a, b) => a.count - b.count);
   const threshold = Math.max(1, Math.ceil(items.length / 2));
   return new Set(sorted.slice(0, threshold).map((item) => item.category));
+}
+
+function DashboardAlertsBanner({
+  attendance,
+  attentionPlayers,
+}: {
+  attendance: WeeklyAttendance;
+  attentionPlayers: AttentionPlayer[];
+}) {
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setDismissed(readDismissedAlertIds());
+  }, []);
+
+  const alerts = useMemo(
+    () =>
+      buildDashboardAlerts(attendance, attentionPlayers).filter(
+        (alert) => !dismissed.has(alert.id),
+      ),
+    [attendance, attentionPlayers, dismissed],
+  );
+
+  if (alerts.length === 0) return null;
+
+  function handleDismiss(id: string) {
+    dismissAlert(id);
+    setDismissed(readDismissedAlertIds());
+  }
+
+  return (
+    <div className="mb-6 space-y-2">
+      {alerts.map((alert) => (
+        <AlertBannerRow key={alert.id} alert={alert} onDismiss={() => handleDismiss(alert.id)} />
+      ))}
+    </div>
+  );
+}
+
+function AlertBannerRow({
+  alert,
+  onDismiss,
+}: {
+  alert: DashboardAlert;
+  onDismiss: () => void;
+}) {
+  const content = (
+    <>
+      <WarningCircle
+        size={20}
+        weight="duotone"
+        className={cn(
+          'shrink-0 mt-0.5',
+          alert.severity === 'critical' ? 'text-[var(--color-miss)]' : 'text-[var(--color-gold)]',
+        )}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-[var(--color-report-text)] font-[family-name:var(--font-display)]">
+          {alert.title}
+        </p>
+        <p className="text-xs text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-0.5 leading-relaxed">
+          {alert.description}
+        </p>
+      </div>
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 p-4 border-2',
+        alert.severity === 'critical'
+          ? 'border-[var(--color-miss)] bg-[var(--color-report-surface)]'
+          : 'border-[var(--color-gold)] bg-[var(--color-report-surface)]',
+      )}
+    >
+      {alert.href ? (
+        <Link href={alert.href} className="flex items-start gap-3 min-w-0 flex-1">
+          {content}
+        </Link>
+      ) : (
+        <div className="flex items-start gap-3 min-w-0 flex-1">{content}</div>
+      )}
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Tutup peringatan"
+        className={cn(
+          'shrink-0 p-1 rounded-[var(--radius-chip)]',
+          'text-[var(--color-report-text-3)] hover:text-[var(--color-report-text)]',
+          'hover:bg-[var(--color-report-bg)] transition-colors',
+        )}
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
 }
 
 export function DashboardClient({
@@ -137,6 +240,8 @@ export function DashboardClient({
           {todayFormatted}
         </p>
       </header>
+
+      <DashboardAlertsBanner attendance={attendance} attentionPlayers={attentionPlayers} />
 
       <div
         className={cn(
@@ -199,17 +304,17 @@ export function DashboardClient({
               </div>
 
               <Link
-                href={`/session//attendance`}
+                href={`/session/${upcomingSession.id}/attendance`}
                 className={cn(
                   'w-full md:w-auto',
                   'inline-flex items-center justify-center gap-2',
-                  'px-6 py-3 rounded-[var(--radius-button)]',
-                  'bg-[var(--color-leather)] text-white',
-                  'font-semibold text-sm font-[family-name:var(--font-ui)]',
-                  'transition-colors duration-150',
-                  'hover:bg-[var(--color-leather-deep)]',
-                  'active:scale-[0.98] active:transition-transform',
-                  'focus-visible:focus-ring',
+                  'border-2 border-[var(--color-hazard)] bg-[var(--color-hazard)]',
+                  'px-6 py-3',
+                  'font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-phosphor)]',
+                  'transition-colors duration-200',
+                  'hover:bg-transparent hover:text-[var(--color-hazard)]',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-report-text)]',
+                  'active:translate-y-px',
                 )}
               >
                 <Barbell size={18} weight="bold" />
