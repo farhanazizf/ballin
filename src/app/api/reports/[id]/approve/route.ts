@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { generateReport } from '@/lib/queries/reports';
-import { reportGenerateSchema } from '@/lib/validators/report';
+import { approveReport } from '@/lib/queries/reports';
+import { reportApproveSchema } from '@/lib/validators/report';
 
-export async function POST(request: NextRequest) {
+type Params = { params: Promise<{ id: string }> };
+
+export async function POST(request: NextRequest, { params }: Params) {
+  const { id } = await params;
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Sesi berakhir.' }, { status: 401 });
@@ -13,10 +16,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
   }
 
-  const parsed = reportGenerateSchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: 'Data rapor tidak valid.' }, { status: 400 });
+  const parsed = reportApproveSchema.safeParse(await request.json());
+  if (!parsed.success) return NextResponse.json({ error: 'Konten rapor tidak valid.' }, { status: 400 });
 
-  const result = await generateReport(supabase, profile.organization_id, parsed.data);
+  const result = await approveReport(supabase, profile.organization_id, user.id, id, parsed.data);
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 400 });
-  return NextResponse.json({ id: result.id }, { status: 201 });
+  return NextResponse.json({ ok: true });
 }
