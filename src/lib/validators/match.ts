@@ -1,16 +1,25 @@
 import { z } from 'zod/v4';
 import { idSchema } from '@/lib/validators/id';
+import type { ValidationLocale } from '@/lib/i18n/messages';
 
-export const matchInputSchema = z.object({
-  teamId: idSchema,
-  opponent: z.string().trim().min(1, 'Nama lawan wajib diisi'),
-  matchType: z.enum(['friendly', 'league', 'tournament']).default('friendly'),
-  playedAt: z.string().datetime({ offset: true }),
-  location: z.string().trim().optional(),
-  scoreFor: z.number().int().min(0).nullable().optional(),
-  scoreAgainst: z.number().int().min(0).nullable().optional(),
-  notes: z.string().trim().max(1000).optional(),
-});
+export function createMatchInputSchema(v: ValidationLocale['match']) {
+  return z.object({
+    teamId: idSchema,
+    opponent: z.string().trim().min(1, v.opponentRequired),
+    matchType: z.enum(['friendly', 'league', 'tournament']).default('friendly'),
+    playedAt: z.string().datetime({ offset: true }),
+    location: z.string().trim().optional(),
+    scoreFor: z.number().int().min(0).nullable().optional(),
+    scoreAgainst: z.number().int().min(0).nullable().optional(),
+    notes: z.string().trim().max(1000).optional(),
+  });
+}
+
+const defaultMatchMessages: ValidationLocale['match'] = {
+  opponentRequired: 'Nama lawan wajib diisi',
+};
+
+export const matchInputSchema = createMatchInputSchema(defaultMatchMessages);
 
 export const boxScoreRowSchema = z.object({
   playerId: idSchema,
@@ -35,5 +44,5 @@ export const boxScoreBatchSchema = z.object({
   rows: z.array(boxScoreRowSchema).min(1).max(20),
 });
 
-export type MatchInput = z.infer<typeof matchInputSchema>;
+export type MatchInput = z.infer<ReturnType<typeof createMatchInputSchema>>;
 export type BoxScoreBatchInput = z.infer<typeof boxScoreBatchSchema>;

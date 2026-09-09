@@ -1,28 +1,49 @@
 import { z } from 'zod/v4';
+import type { ValidationLocale } from '@/lib/i18n/messages';
 
-const teamBaseSchema = z.object({
-  name: z.string().min(1, 'Nama kelas wajib diisi'),
-  ageMin: z.number().int().min(0).max(99).nullable().optional(),
-  ageMax: z.number().int().min(0).max(99).nullable().optional(),
-  trackDrillStats: z.boolean().default(true),
-  isActive: z.boolean().default(true),
-});
-
-function refineAgeRange<T extends z.ZodTypeAny>(schema: T) {
+function refineAgeRange<T extends z.ZodTypeAny>(schema: T, message: string) {
   return schema.refine(
     (data) => {
       const { ageMin, ageMax } = data as { ageMin?: number | null; ageMax?: number | null };
       if (ageMin == null || ageMax == null) return true;
       return ageMin <= ageMax;
     },
-    { message: 'Usia minimum tidak boleh lebih besar dari usia maksimum', path: ['ageMax'] },
+    { message, path: ['ageMax'] },
   );
 }
 
-export const teamSchema = refineAgeRange(teamBaseSchema);
+export function createTeamSchema(v: ValidationLocale['team']) {
+  const base = z.object({
+    name: z.string().min(1, v.nameRequired),
+    ageMin: z.number().int().min(0).max(99).nullable().optional(),
+    ageMax: z.number().int().min(0).max(99).nullable().optional(),
+    trackDrillStats: z.boolean().default(true),
+    isActive: z.boolean().default(true),
+  });
+  return refineAgeRange(base, v.ageRangeInvalid);
+}
 
-export type TeamInput = z.infer<typeof teamSchema>;
+const defaultTeamMessages: ValidationLocale['team'] = {
+  nameRequired: 'Nama kelas wajib diisi',
+  ageRangeInvalid: 'Usia minimum tidak boleh lebih besar dari usia maksimum',
+  invalidData: 'Data kelas tidak valid.',
+};
 
-export const teamUpdateSchema = refineAgeRange(teamBaseSchema.partial());
+export const teamSchema = createTeamSchema(defaultTeamMessages);
+
+export type TeamInput = z.infer<ReturnType<typeof createTeamSchema>>;
+
+export function createTeamUpdateSchema(v: ValidationLocale['team']) {
+  const base = z.object({
+    name: z.string().min(1, v.nameRequired).optional(),
+    ageMin: z.number().int().min(0).max(99).nullable().optional(),
+    ageMax: z.number().int().min(0).max(99).nullable().optional(),
+    trackDrillStats: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+  });
+  return refineAgeRange(base, v.ageRangeInvalid);
+}
+
+export const teamUpdateSchema = createTeamUpdateSchema(defaultTeamMessages);
 
 export type TeamUpdateInput = z.infer<typeof teamUpdateSchema>;

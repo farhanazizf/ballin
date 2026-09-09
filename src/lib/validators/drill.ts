@@ -1,25 +1,35 @@
 import { z } from 'zod/v4';
+import type { ValidationLocale } from '@/lib/i18n/messages';
 
-export const drillSchema = z.object({
-  name: z.string().min(1, 'Nama drill wajib diisi'),
-  category: z.enum([
-    'Shooting',
-    'Finishing',
-    'Ballhandling',
-    'Defense',
-    'Athleticism',
-    'Conditioning',
-  ]),
-  type: z.enum(['attempt', 'timed', 'count_in_time', 'measure', 'rating']),
-  defaultTarget: z.number().int().positive().optional(),
-  unit: z.string().optional(),
-  lowerIsBetter: z.boolean().default(false),
-  attributeWeights: z.record(z.string(), z.number().min(0).max(1)).default({}),
-  instructions: z.string().optional(),
-  videoUrl: z.url().optional(),
-});
+export function createDrillSchema(v: ValidationLocale['drill']) {
+  return z.object({
+    name: z.string().min(1, v.nameRequired),
+    category: z.enum([
+      'Shooting',
+      'Finishing',
+      'Ballhandling',
+      'Defense',
+      'Athleticism',
+      'Conditioning',
+    ]),
+    type: z.enum(['attempt', 'timed', 'count_in_time', 'measure', 'rating']),
+    defaultTarget: z.number().int().positive().optional(),
+    unit: z.string().optional(),
+    lowerIsBetter: z.boolean().default(false),
+    attributeWeights: z.record(z.string(), z.number().min(0).max(1)).default({}),
+    instructions: z.string().optional(),
+    videoUrl: z.url().optional(),
+  });
+}
 
-export type DrillInput = z.infer<typeof drillSchema>;
+const defaultDrillMessages: ValidationLocale['drill'] = {
+  nameRequired: 'Nama drill wajib diisi',
+  invalidData: 'Data drill tidak valid.',
+};
+
+export const drillSchema = createDrillSchema(defaultDrillMessages);
+
+export type DrillInput = z.infer<ReturnType<typeof createDrillSchema>>;
 
 export const drillUpdateSchema = drillSchema.partial().extend({
   isArchived: z.boolean().optional(),

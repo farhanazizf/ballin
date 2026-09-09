@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AppProviders } from "@/components/providers/app-providers";
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -57,7 +58,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${archivo.variable} ${instrumentSans.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased">
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
