@@ -15,7 +15,10 @@ delete from drill_events where recorded_by in (
   '10000000-0000-0000-0000-000000000002',
   '10000000-0000-0000-0000-000000000003'
 );
-delete from session_drills where id = '50000000-0000-0000-0000-000000000001';
+delete from session_drills where id in (
+  '50000000-0000-0000-0000-000000000001',
+  '50000000-0000-0000-0000-000000000002'
+);
 delete from attendance where session_id in (
   '40000000-0000-0000-0000-000000000001',
   '40000000-0000-0000-0000-000000000002'
@@ -214,6 +217,16 @@ from drills d
 where d.organization_id = '00000000-0000-0000-0000-000000000001'
   and d.name = 'Free throw'
 limit 1;
+
+insert into session_drills (id, session_id, drill_id, target, track_misses, created_by)
+values (
+  '50000000-0000-0000-0000-000000000002',
+  '40000000-0000-0000-0000-000000000002',
+  '61000000-0000-0000-0000-000000000001',
+  10,
+  true,
+  '10000000-0000-0000-0000-000000000002'
+);
 
 insert into drill_events (
   client_event_id, session_drill_id, player_id, result,

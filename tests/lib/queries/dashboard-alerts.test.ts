@@ -4,6 +4,9 @@ import {
   countConsecutiveAbsences,
 } from '@/lib/queries/dashboard-alerts';
 import type { AttentionPlayer, WeeklyAttendance } from '@/lib/queries/dashboard';
+import { dashboard } from '@/lib/i18n/messages/dashboard';
+
+const alertMessages = dashboard.id.alerts;
 
 describe('countConsecutiveAbsences', () => {
   it('menghitung absen berturut dari sesi terbaru', () => {
@@ -37,7 +40,7 @@ describe('buildDashboardAlerts', () => {
   };
 
   it('membuat alert penurunan kehadiran tim', () => {
-    const alerts = buildDashboardAlerts(baseAttendance, []);
+    const alerts = buildDashboardAlerts(baseAttendance, [], alertMessages);
     expect(alerts.some((a) => a.type === 'attendance_drop')).toBe(true);
   });
 
@@ -49,7 +52,7 @@ describe('buildDashboardAlerts', () => {
         reason: 'Tidak hadir 3 sesi berturut-turut',
       },
     ];
-    const alerts = buildDashboardAlerts({ ...baseAttendance, trend: 0, total: 0 }, players);
+    const alerts = buildDashboardAlerts({ ...baseAttendance, trend: 0, total: 0 }, players, alertMessages);
     expect(alerts[0]?.type).toBe('consecutive_absence');
     expect(alerts[0]?.href).toBe('/players/p1');
   });
