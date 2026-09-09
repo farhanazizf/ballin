@@ -1,39 +1,46 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleNotch } from '@phosphor-icons/react';
 import Link from 'next/link';
-import { loginSchema, type LoginInput } from '@/lib/validators/auth';
+import { createLoginSchema, type LoginInput } from '@/lib/validators/auth';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import { LanguageToggle } from '@/components/i18n/language-toggle';
 import { cn } from '@/lib/utils';
+import { AuthFormPanel, AuthHeroPanel, AuthHeroTitle } from '@/components/motion/auth-hero-panel';
+import { AuthQuoteRotator } from '@/components/motion/auth-quote-rotator';
+import { COACH_ATHLETE_QUOTES } from '@/lib/constants/athlete-quotes';
 
 const UNIT_ID = 'DBA-KRW';
 const REV = 'REV 1.0';
 
-async function handleLogin(data: LoginInput) {
-  const { createClient } = await import('@/lib/supabase/client');
-  const supabase = createClient();
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email: data.email,
-    password: data.password,
-  });
-
-  if (error) {
-    throw new Error(
-      error.message === 'Invalid login credentials'
-        ? 'Email atau password salah. Periksa kembali dan coba lagi.'
-        : 'Gagal masuk. Periksa koneksi internet dan coba lagi.',
-    );
-  }
-}
-
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useTranslations();
+  const loginSchema = useMemo(() => createLoginSchema(t.validation.auth), [t.validation.auth]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  async function handleLogin(data: LoginInput) {
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (error) {
+      throw new Error(
+        error.message === 'Invalid login credentials'
+          ? t.auth.coach.invalidCredentials
+          : t.auth.coach.loginFailed,
+      );
+    }
+  }
+
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -57,7 +64,7 @@ export default function LoginPage() {
         router.push('/dashboard');
       } catch (err) {
         setServerError(
-          err instanceof Error ? err.message : 'Terjadi kesalahan. Coba lagi.',
+          err instanceof Error ? err.message : t.common.genericError,
         );
       }
     });
@@ -73,43 +80,41 @@ export default function LoginPage() {
           +
         </span>
 
-        <header>
-          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-hazard)]">
-            [ AUTH / COACH ]
-          </p>
-          <h1 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(2.75rem,11vw,6.5rem)] font-black uppercase leading-[0.88] tracking-[-0.05em] text-[var(--color-phosphor)]">
-            Catat
-            <br />
-            latihan
-          </h1>
-          <p className="mt-5 max-w-[34ch] font-[family-name:var(--font-ui)] text-sm leading-relaxed text-[var(--color-field-text-2)]">
-            Satu ketukan per drill. Langsung dari pinggir lapangan, bahkan tanpa sinyal.
-          </p>
-        </header>
+        <AuthHeroPanel>
+          <header>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-hazard)]">
+              {t.auth.coach.badge}
+            </p>
+            <AuthHeroTitle title={t.auth.coach.title} />
+            <AuthQuoteRotator quotes={COACH_ATHLETE_QUOTES} />
+          </header>
+        </AuthHeroPanel>
 
         <dl className="mt-10 space-y-0 font-mono text-[10px] uppercase tracking-[0.1em] lg:mt-0">
           <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-[var(--color-field-border)] py-3">
-            <dt className="text-[var(--color-field-text-3)]">Unit</dt>
+            <dt className="text-[var(--color-field-text-3)]">{t.common.unit}</dt>
             <dd className="text-right text-[var(--color-phosphor)]">{UNIT_ID}</dd>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-[var(--color-field-border)] py-3">
-            <dt className="text-[var(--color-field-text-3)]">Build</dt>
+            <dt className="text-[var(--color-field-text-3)]">{t.common.build}</dt>
             <dd className="text-right text-[var(--color-phosphor)]">{REV}</dd>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-b border-[var(--color-field-border)] py-3">
-            <dt className="text-[var(--color-field-text-3)]">Status</dt>
+            <dt className="text-[var(--color-field-text-3)]">{t.common.status}</dt>
             <dd className="text-right text-[var(--color-phosphor)]">
-              <samp>READY</samp>
+              <samp>{t.common.ready}</samp>
             </dd>
           </div>
         </dl>
       </section>
 
+      <AuthFormPanel>
       <section className="flex flex-col">
-        <div className="border-b border-[var(--color-field-border)] px-6 py-4 sm:px-8">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--color-field-border)] px-6 py-4 sm:px-8">
           <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-field-text-3)]">
-            &gt;&gt;&gt; credentials / coach terminal
+            {t.auth.coach.terminalLabel}
           </p>
+          <LanguageToggle />
         </div>
 
         <div className="flex flex-1 flex-col px-6 py-6 sm:px-8">
@@ -132,7 +137,7 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   inputMode="email"
-                  placeholder="coach@akademi.id"
+                  placeholder={t.auth.coach.emailPlaceholder}
                   disabled={isPending}
                   {...register('email')}
                   className={cn(
@@ -160,7 +165,7 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   autoComplete="current-password"
-                  placeholder="Minimal 8 karakter"
+                  placeholder={t.auth.coach.passwordPlaceholder}
                   disabled={isPending}
                   {...register('password')}
                   className={cn(
@@ -205,10 +210,10 @@ export default function LoginPage() {
                 {isPending ? (
                   <>
                     <CircleNotch size={20} weight="bold" className="animate-spin" />
-                    Processing
+                    {t.common.processing}
                   </>
                 ) : (
-                  '>>> Masuk ke dashboard'
+                  t.auth.coach.submit
                 )}
               </button>
             </div>
@@ -221,17 +226,18 @@ export default function LoginPage() {
               href="/player-login"
               className="text-[var(--color-field-text-2)] underline decoration-[var(--color-field-border)] underline-offset-4 transition-colors hover:text-[var(--color-phosphor)] hover:decoration-[var(--color-hazard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-phosphor)]"
             >
-              Masuk sebagai pemain
+              {t.auth.coach.switchToPlayer}
             </Link>
           </p>
         </div>
 
         <footer className="mt-auto border-t border-[var(--color-field-border)] px-6 py-3 sm:px-8">
           <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--color-field-text-3)]">
-            Dynasty Basketball Academy · Karawang · © Ballin
+            {t.common.footer}
           </p>
         </footer>
       </section>
+      </AuthFormPanel>
     </main>
   );
 }

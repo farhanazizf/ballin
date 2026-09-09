@@ -26,6 +26,8 @@ import {
 } from '@phosphor-icons/react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import type { PlayerMessages } from '@/lib/i18n/messages';
 import type {
   PersonalBest,
   PlayerBadge,
@@ -52,11 +54,16 @@ const archetypeIcons: Record<string, typeof Lightning> = {
   'Glue Guy': Star,
 };
 
-function getTrend(current: number, previous: number, lowerIsBetter = false) {
+function getTrend(
+  current: number,
+  previous: number,
+  trendLabels: PlayerMessages['card']['trend'],
+  lowerIsBetter = false,
+) {
   const diff = lowerIsBetter ? previous - current : current - previous;
-  if (Math.abs(diff) < 0.01) return { direction: 'same' as const, label: 'Sama' };
-  if (diff > 0) return { direction: 'up' as const, label: 'Naik' };
-  return { direction: 'down' as const, label: 'Turun' };
+  if (Math.abs(diff) < 0.01) return { direction: 'same' as const, label: trendLabels.same };
+  if (diff > 0) return { direction: 'up' as const, label: trendLabels.up };
+  return { direction: 'down' as const, label: trendLabels.down };
 }
 
 const fadeUp = {
@@ -75,14 +82,16 @@ const fadeUp = {
 function HeroSection({
   card,
   index,
+  ageYearsLabel,
 }: {
   card: PlayerCardData;
   index: number;
+  ageYearsLabel: (age: number) => string;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const ArchIcon = card.archetype ? archetypeIcons[card.archetype] ?? Lightning : null;
   const jerseyLabel = card.jerseyNumber != null ? `#${card.jerseyNumber}` : '';
-  const metaParts = [jerseyLabel, card.className, card.age != null ? `${card.age} tahun` : '']
+  const metaParts = [jerseyLabel, card.className, card.age != null ? ageYearsLabel(card.age) : '']
     .filter(Boolean)
     .join(' · ');
 
@@ -183,15 +192,18 @@ export function PlayerCardClient({
   personalBests,
   badges,
 }: PlayerCardClientProps) {
+  const { t } = useTranslations();
+  const cardCopy = t.player.card;
+
   if (!card.hasAttributes) {
     return (
       <div className="flex flex-col gap-8 pb-12">
-        <HeroSection card={card} index={0} />
+        <HeroSection card={card} index={0} ageYearsLabel={(age) => cardCopy.ageYears.replace('{age}', String(age))} />
         <EmptyState
           theme="field"
           icon={<Basketball size={28} weight="duotone" />}
-          title="Kartumu menunggu latihan pertama"
-          description="Datang latihan dan ikut drill untuk melihat perkembangan, bentuk permainan, dan lencana di sini."
+          title={cardCopy.waitingFirstSession.title}
+          description={cardCopy.waitingFirstSession.description}
           className="px-5"
         />
       </div>
@@ -200,7 +212,7 @@ export function PlayerCardClient({
 
   return (
     <div className="flex flex-col gap-8 pb-12">
-      <HeroSection card={card} index={0} />
+      <HeroSection card={card} index={0} ageYearsLabel={(age) => cardCopy.ageYears.replace('{age}', String(age))} />
 
       <motion.section
         className="px-5"
@@ -238,7 +250,7 @@ export function PlayerCardClient({
                 {streak}
               </span>
               <p className="font-[family-name:var(--font-ui)] text-sm text-[var(--color-field-text-3)] mt-0.5">
-                latihan beruntun
+                {cardCopy.streakLabel}
               </p>
             </div>
           </div>
@@ -253,7 +265,7 @@ export function PlayerCardClient({
                     ? 'bg-[var(--color-made)]'
                     : 'border border-[var(--color-field-border)] bg-transparent',
                 )}
-                title={attended ? 'Hadir' : 'Tidak hadir'}
+                title={attended ? cardCopy.attended : cardCopy.absent}
               />
             ))}
           </div>
@@ -274,7 +286,7 @@ export function PlayerCardClient({
               'text-[var(--color-field-text-2)]',
             )}
           >
-            Bentuk permainan
+            {cardCopy.gameShape}
           </h2>
 
           <div
@@ -296,7 +308,7 @@ export function PlayerCardClient({
                   tickLine={false}
                 />
                 <Radar
-                  name="Sebelumnya"
+                  name={cardCopy.before}
                   dataKey="previous"
                   stroke="var(--color-field-text-3)"
                   fill="transparent"
@@ -305,7 +317,7 @@ export function PlayerCardClient({
                   dot={false}
                 />
                 <Radar
-                  name="Sekarang"
+                  name={cardCopy.now}
                   dataKey="current"
                   stroke="var(--color-leather)"
                   fill="var(--color-leather)"
@@ -319,7 +331,7 @@ export function PlayerCardClient({
             <div className="flex items-center justify-center gap-5 -mt-2">
               <span className="flex items-center gap-1.5 text-xs font-[family-name:var(--font-ui)] text-[var(--color-leather)]">
                 <span className="w-4 h-0.5 bg-[var(--color-hazard)]" />
-                Sekarang
+                {cardCopy.now}
               </span>
               <span className="flex items-center gap-1.5 text-xs font-[family-name:var(--font-ui)] text-[var(--color-field-text-3)]">
                 <span
@@ -329,7 +341,7 @@ export function PlayerCardClient({
                       'repeating-linear-gradient(90deg, var(--color-field-text-3) 0 3px, transparent 3px 6px)',
                   }}
                 />
-                Sebelumnya
+                {cardCopy.before}
               </span>
             </div>
           </div>
@@ -350,7 +362,7 @@ export function PlayerCardClient({
               'text-[var(--color-field-text-2)]',
             )}
           >
-            Statistik terbaru
+            {cardCopy.recentStats}
           </h2>
 
           <div className="grid grid-cols-2 gap-3">
@@ -362,7 +374,7 @@ export function PlayerCardClient({
               const prev = isAttempt
                 ? (drill.prevMade ?? drill.made ?? 0) / (drill.prevAttempts || drill.attempts || 1)
                 : (drill.prevValue ?? drill.value)!;
-              const trend = getTrend(current, prev, !isAttempt && Boolean(drill.lowerIsBetter));
+              const trend = getTrend(current, prev, cardCopy.trend, !isAttempt && Boolean(drill.lowerIsBetter));
 
               return (
                 <div
@@ -423,7 +435,7 @@ export function PlayerCardClient({
               'text-[var(--color-field-text-2)]',
             )}
           >
-            Rekor pribadi
+            {cardCopy.personalBests}
           </h2>
 
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
@@ -471,7 +483,7 @@ export function PlayerCardClient({
               'text-[var(--color-field-text-2)]',
             )}
           >
-            Lencana
+            {cardCopy.badges}
           </h2>
 
           <div className="grid grid-cols-2 gap-3">

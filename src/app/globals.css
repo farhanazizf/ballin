@@ -158,6 +158,17 @@
 }
 
 @layer utilities {
+  .motion-link {
+    transition: color 200ms ease, border-color 200ms ease, background-color 200ms ease;
+  }
+
+  .motion-press {
+    transition: transform 100ms ease;
+  }
+
+  .motion-press:active {
+    transform: translateY(1px) scale(0.98);
+  }
   /* Focus ring */
   .focus-ring {
     outline: 2px solid var(--color-focus);

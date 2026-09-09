@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, CircleNotch } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/use-translations';
 import type { RubricPlayerRow } from '@/lib/queries/rubric';
 
 type RubricData = {
@@ -15,6 +16,8 @@ type RubricData = {
 const SCORES = [1, 2, 3, 4, 5] as const;
 
 export function RubricClient({ sessionId }: { sessionId: string }) {
+  const { t } = useTranslations();
+  const r = t.field.rubric;
   const [data, setData] = useState<RubricData | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { effort?: number; coachability?: number; discipline?: number }>>({});
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +26,7 @@ export function RubricClient({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     void fetch(`/api/sessions/${sessionId}/rubric`, { credentials: 'include' })
       .then(async (res) => {
-        if (!res.ok) throw new Error('Gagal memuat rubrik');
+        if (!res.ok) throw new Error(r.loadFailed);
         const json = (await res.json()) as RubricData & { rotation: RubricData['rotation'] };
         setData({ rotation: json.rotation, scores: json.scores });
         const initial: typeof drafts = {};
@@ -37,7 +40,7 @@ export function RubricClient({ sessionId }: { sessionId: string }) {
         }
         setDrafts(initial);
       })
-      .catch(() => setError('Gagal memuat rubrik. Buka ulang halaman ini.'));
+      .catch(() => setError(r.loadFailed));
   }, [sessionId]);
 
   function setScore(playerId: string, field: 'effort' | 'coachability' | 'discipline', value: number) {
@@ -63,7 +66,7 @@ export function RubricClient({ sessionId }: { sessionId: string }) {
       });
       const body = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(body.error ?? 'Gagal menyimpan rubrik.');
+        setError(body.error ?? r.saveFailed);
         return;
       }
     });
@@ -72,12 +75,12 @@ export function RubricClient({ sessionId }: { sessionId: string }) {
   return (
     <div className="min-h-[100dvh] pb-28 px-4 py-6">
       <Link href={`/session/${sessionId}/review`} className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-field-text-3)] mb-6">
-        <ArrowLeft size={16} /> Review drill
+        <ArrowLeft size={16} /> {r.backToReview}
       </Link>
 
-      <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--color-field-text)] mb-2">Rubrik akhir sesi</h1>
+      <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--color-field-text)] mb-2">{r.title}</h1>
       <p className="font-[family-name:var(--font-ui)] text-sm text-[var(--color-field-text-2)] mb-6">
-        Nilai 5 pemain rotasi — effort, coachability, discipline (1–5). Boleh dilewati.
+        {r.subtitle}
       </p>
 
       {error ? <p className="mb-4 font-mono text-xs text-[var(--color-hazard)]">{error}</p> : null}
@@ -92,7 +95,7 @@ export function RubricClient({ sessionId }: { sessionId: string }) {
               {(['effort', 'coachability', 'discipline'] as const).map((field) => (
                 <div key={field} className="mb-3">
                   <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-field-text-3)] mb-2">
-                    {field === 'effort' ? 'Usaha' : field === 'coachability' ? 'Coachability' : 'Disiplin'}
+                    {field === 'effort' ? r.effort : field === 'coachability' ? r.coachability : r.discipline}
                   </p>
                   <div className="flex gap-2">
                     {SCORES.map((score) => (
@@ -120,10 +123,10 @@ export function RubricClient({ sessionId }: { sessionId: string }) {
 
       <footer className="fixed bottom-0 inset-x-0 border-t border-[var(--color-field-border)] bg-[var(--color-field-bg)] p-4 flex flex-col gap-2">
         <Button variant="primary" size="field" className="w-full" disabled={isPending || !data} onClick={handleSave}>
-          {isPending ? <><CircleNotch className="animate-spin" size={18} /> Menyimpan...</> : 'Simpan rubrik'}
+          {isPending ? <><CircleNotch className="animate-spin" size={18} /> Menyimpan...</> : r.saveRubric}
         </Button>
         <Link href={`/session/${sessionId}/close`} className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-phosphor)] py-2">
-          Lanjut ke catatan sesi →
+          {r.continueToNotes}
         </Link>
       </footer>
     </div>

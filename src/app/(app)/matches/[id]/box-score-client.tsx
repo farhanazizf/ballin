@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { ArrowLeft, CircleNotch } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { BoxScoreRow, MatchDetail } from '@/lib/queries/matches';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 type DraftRow = BoxScoreRow;
 
@@ -15,6 +16,8 @@ export function BoxScoreClient({
   match: MatchDetail;
   initialRows: BoxScoreRow[];
 }) {
+  const { t } = useTranslations();
+  const m = t.matches;
   const [rows, setRows] = useState<DraftRow[]>(initialRows);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -46,7 +49,7 @@ export function BoxScoreClient({
       });
       const body = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(body.error ?? 'Gagal menyimpan box score.');
+        setError(body.error ?? m.boxScoreSaveFailed);
         return;
       }
       setSaved(true);
@@ -56,18 +59,18 @@ export function BoxScoreClient({
   return (
     <div className="min-h-[100dvh] px-4 py-6 md:px-8 md:py-8">
       <Link href="/matches" className="inline-flex items-center gap-2 text-sm text-[var(--color-report-text-2)] mb-6">
-        <ArrowLeft size={16} /> Daftar pertandingan
+        <ArrowLeft size={16} /> {m.backToList}
       </Link>
-      <h1 className="text-2xl font-semibold text-[var(--color-report-text)] mb-1">{match.teamName} vs {match.opponent}</h1>
-      <p className="text-sm text-[var(--color-report-text-2)] mb-6">Box score</p>
+      <h1 className="text-2xl font-semibold text-[var(--color-report-text)] mb-1">{match.teamName} {m.vs} {match.opponent}</h1>
+      <p className="text-sm text-[var(--color-report-text-2)] mb-6">{m.boxScore}</p>
       {error ? <p className="text-sm text-[var(--color-miss)] mb-4">{error}</p> : null}
-      {saved ? <p className="text-sm text-[var(--color-made)] mb-4">Box score tersimpan.</p> : null}
+      {saved ? <p className="text-sm text-[var(--color-made)] mb-4">{m.boxScore} tersimpan.</p> : null}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm border border-[var(--color-report-border)]">
           <thead>
             <tr className="bg-[var(--color-report-bg)]">
-              <th className="p-2 text-left">Pemain</th>
+              <th className="p-2 text-left">{m.playerColumn}</th>
               <th className="p-2">Min</th>
               <th className="p-2">PTS</th>
               <th className="p-2">FGM</th>
@@ -97,7 +100,7 @@ export function BoxScoreClient({
       </div>
 
       <Button variant="report-primary" className="mt-6 w-full md:w-auto" disabled={isPending} onClick={handleSave}>
-        {isPending ? <><CircleNotch className="animate-spin" size={18} /> Menyimpan...</> : 'Simpan box score'}
+        {isPending ? <><CircleNotch className="animate-spin" size={18} /> Menyimpan...</> : m.saveBoxScore}
       </Button>
     </div>
   );

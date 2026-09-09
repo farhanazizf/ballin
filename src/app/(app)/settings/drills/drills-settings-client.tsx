@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Archive, CircleNotch, PencilSimple, Plus } from '@phosphor-icons/react';
-import { drillSchema, type DrillInput } from '@/lib/validators/drill';
+import { createDrillSchema, type DrillInput } from '@/lib/validators/drill';
+import { useTranslations } from '@/lib/i18n/use-translations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -17,13 +18,6 @@ const DRILL_CATEGORIES = [
   'Conditioning',
 ] as const;
 
-const DRILL_TYPES = [
-  { value: 'attempt', label: 'Attempt (made/miss)' },
-  { value: 'timed', label: 'Timed' },
-  { value: 'count_in_time', label: 'Count in time' },
-  { value: 'measure', label: 'Measure' },
-  { value: 'rating', label: 'Rating' },
-] as const;
 
 export type DrillRow = {
   id: string;
@@ -87,6 +81,8 @@ function selectClassName() {
 }
 
 function DrillForm({
+  messages,
+
   initial,
   submitLabel,
   onCancel,
@@ -96,7 +92,17 @@ function DrillForm({
   submitLabel: string;
   onCancel?: () => void;
   onSubmit: (payload: DrillInput) => Promise<void>;
+  messages: ReturnType<typeof useTranslations>['t'];
 }) {
+  const sd = messages.settings.drills;
+  const drillSchema = useMemo(() => createDrillSchema(messages.validation.drill), [messages.validation.drill]);
+  const DRILL_TYPES = [
+    { value: 'attempt', label: sd.types.attempt },
+    { value: 'timed', label: sd.types.timed },
+    { value: 'count_in_time', label: sd.types.countInTime },
+    { value: 'measure', label: sd.types.measure },
+    { value: 'rating', label: sd.types.rating },
+  ] as const;
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -106,14 +112,14 @@ function DrillForm({
     setError(null);
     const parsed = drillSchema.safeParse(parseForm(values));
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Data drill tidak valid.');
+      setError(parsed.error.issues[0]?.message ?? messages.validation.drill.invalidData);
       return;
     }
     startTransition(async () => {
       try {
         await onSubmit(parsed.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Gagal menyimpan drill.');
+        setError(err instanceof Error ? err.message : sd.saveFailed);
       }
     });
   }
@@ -122,14 +128,14 @@ function DrillForm({
     <form onSubmit={handleSubmit} className="space-y-4 border-2 border-[var(--color-report-border)] bg-[var(--color-report-surface)] p-4">
       <Input
         theme="report"
-        label="Nama drill"
+        label={sd.drillName}
         value={values.name}
         onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
         required
       />
       <div>
         <label className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
-          Kategori
+          {sd.category}
         </label>
         <select
           value={values.category}
@@ -150,7 +156,7 @@ function DrillForm({
       </div>
       <div>
         <label className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
-          Tipe input
+          {sd.inputType}
         </label>
         <select
           value={values.type}
@@ -172,7 +178,7 @@ function DrillForm({
       <div className="grid grid-cols-2 gap-3">
         <Input
           theme="report"
-          label="Target default"
+          label={sd.defaultTarget}
           type="number"
           min={1}
           value={values.defaultTarget}
@@ -180,10 +186,10 @@ function DrillForm({
         />
         <Input
           theme="report"
-          label="Satuan"
+          label={sd.unit}
           value={values.unit}
           onChange={(e) => setValues((v) => ({ ...v, unit: e.target.value }))}
-          hint="Contoh: percobaan, detik"
+          hint={sd.unitHint}
         />
       </div>
       {error && (
@@ -195,7 +201,7 @@ function DrillForm({
         </Button>
         {onCancel && (
           <Button type="button" variant="report-secondary" onClick={onCancel} disabled={isPending}>
-            Batal
+            {messages.common.cancel}
           </Button>
         )}
       </div>
@@ -211,6 +217,7 @@ export function DrillsSettingsClient({
   canManage: boolean;
 }) {
   const router = useRouter();
+  const { t } = useTranslations();
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<string | null>(null);
@@ -223,7 +230,7 @@ export function DrillsSettingsClient({
     });
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
-      throw new Error(data.error ?? 'Gagal menyimpan drill.');
+      throw new Error(data.error ?? t.settings.drills.saveFailed);
     }
     setShowCreate(false);
     router.refresh();
@@ -237,7 +244,7 @@ export function DrillsSettingsClient({
     });
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
-      throw new Error(data.error ?? 'Gagal memperbarui drill.');
+      throw new Error(data.error ?? t.settings.drills.updateFailed);
     }
     setEditingId(null);
     router.refresh();
@@ -253,7 +260,7 @@ export function DrillsSettingsClient({
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
-        throw new Error(data.error ?? 'Gagal mengarsipkan drill.');
+        throw new Error(data.error ?? t.settings.drills.archiveFailed);
       }
       router.refresh();
     } finally {
@@ -275,14 +282,15 @@ export function DrillsSettingsClient({
               }}
             >
               <Plus size={16} weight="bold" />
-              Tambah drill
+              {t.settings.drills.addDrill}
             </Button>
           ) : (
             <DrillForm
               initial={emptyForm()}
-              submitLabel="Simpan drill"
+              submitLabel={t.settings.drills.saveDrill}
               onCancel={() => setShowCreate(false)}
               onSubmit={createDrill}
+              messages={t}
             />
           )}
         </div>
@@ -290,7 +298,7 @@ export function DrillsSettingsClient({
 
       {!canManage && (
         <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--color-report-text-3)]">
-          Hanya admin yang dapat mengubah drill library.
+          {t.settings.drills.adminOnly}
         </p>
       )}
 
@@ -301,9 +309,10 @@ export function DrillsSettingsClient({
               <div className="p-4">
                 <DrillForm
                   initial={drillToForm(drill)}
-                  submitLabel="Simpan perubahan"
+                  submitLabel={t.settings.drills.saveChanges}
                   onCancel={() => setEditingId(null)}
                   onSubmit={(payload) => updateDrill(drill.id, payload)}
+                  messages={t}
                 />
               </div>
             ) : (
@@ -330,7 +339,7 @@ export function DrillsSettingsClient({
                         'border border-[var(--color-report-border)] p-2',
                         'text-[var(--color-report-text-2)] hover:border-[var(--color-hazard)] hover:text-[var(--color-hazard)]',
                       )}
-                      aria-label={`Edit ${drill.name}`}
+                      aria-label={t.settings.drills.editAria.replace('{name}', drill.name)}
                     >
                       <PencilSimple size={16} />
                     </button>
@@ -342,7 +351,7 @@ export function DrillsSettingsClient({
                         'border border-[var(--color-report-border)] p-2',
                         'text-[var(--color-report-text-2)] hover:border-[var(--color-hazard)] hover:text-[var(--color-hazard)]',
                       )}
-                      aria-label={`Arsipkan ${drill.name}`}
+                      aria-label={t.settings.drills.archiveAria.replace('{name}', drill.name)}
                     >
                       {archivingId === drill.id ? (
                         <CircleNotch className="animate-spin" size={16} />

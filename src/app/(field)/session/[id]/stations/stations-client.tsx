@@ -12,6 +12,7 @@ import {
   type StationDraft,
 } from '@/lib/field/stations';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 type DrillRow = { id: string; name: string; category: string };
 type PlayerRow = { id: string; nickname: string; jerseyNumber?: number | null };
@@ -20,6 +21,8 @@ type StationRow = { id: string; label: string; coachId?: string | null; sortOrde
 const ACTIVE_STATION_KEY = (sessionId: string) => `ballin_active_station_${sessionId}`;
 
 export function StationsClient({ sessionId, teamName }: { sessionId: string; teamName: string }) {
+  const { t } = useTranslations();
+  const s = t.field.stations;
   const [drills, setDrills] = useState<DrillRow[]>([]);
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [stations, setStations] = useState<StationRow[]>([]);
@@ -98,7 +101,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
     });
     setSaving(false);
     if (!res.ok) {
-      setError('Gagal menyimpan pos. Periksa koneksi lalu coba lagi.');
+      setError(s.saveFailed);
       return;
     }
     setSetupOpen(false);
@@ -111,7 +114,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
 
   async function handleRotate() {
     if (stations.length < 2) return;
-    const confirmed = window.confirm('Rotasi semua kelompok ke pos berikutnya?');
+    const confirmed = window.confirm(s.rotateConfirm);
     if (!confirmed) return;
     const next = rotateStationAssignments(
       stations.map((s) => ({ label: s.label, playerIds: [...s.playerIds] })),
@@ -139,7 +142,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
         </Link>
         <div className="min-w-0 flex-1">
           <h1 className="font-[family-name:var(--font-display)] text-lg text-[var(--color-field-text)]">
-            {setupOpen ? 'Atur pos' : 'Pilih drill'} · {teamName}
+            {setupOpen ? s.setupTitle : s.pickDrill} · {teamName}
           </h1>
           {!setupOpen && !singleCoachMode && activeStationId && (
             <p className="text-xs text-[var(--color-field-text-3)]">
@@ -154,7 +157,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
             className="inline-flex min-h-[var(--size-touch-min)] items-center gap-1.5 border border-[var(--color-field-border)] px-3 text-xs font-mono uppercase tracking-[0.08em] text-[var(--color-field-text-2)]"
           >
             <GearSix size={16} />
-            Pos
+            {s.stationsButton}
           </button>
         )}
       </header>
@@ -169,10 +172,10 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
               size="sm"
               disabled={draft.length >= 8}
               onClick={() =>
-                setDraft((prev) => [...prev, { label: `Pos ${prev.length + 1}`, playerIds: [] }])
+                setDraft((prev) => [...prev, { label: `{s.stationsButton} ${prev.length + 1}`, playerIds: [] }])
               }
             >
-              Tambah pos
+              {s.addStation}
             </Button>
             <Button
               variant="secondary"
@@ -180,7 +183,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
               disabled={draft.length <= 1}
               onClick={() => setDraft((prev) => prev.slice(0, -1))}
             >
-              Kurangi pos
+              {s.removeStation}
             </Button>
             <Button
               variant="secondary"
@@ -195,7 +198,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
                 );
               }}
             >
-              Bagi merata
+              {s.splitEvenly}
             </Button>
           </div>
 
@@ -242,7 +245,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
               Batal
             </Button>
             <Button className="flex-1" disabled={saving || draft.length === 0} onClick={() => void handleSave()}>
-              {saving ? 'Menyimpan…' : 'Simpan pos'}
+              {saving ? t.common.saving : s.saveStations}
             </Button>
           </div>
         </div>
@@ -251,7 +254,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
           {!singleCoachMode && (
             <div className="mb-6 space-y-2">
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-field-text-3)]">
-                Pos saya
+                {s.stationsButton} saya
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {stations.map((station) => (
@@ -278,7 +281,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
               {stations.length > 1 && (
                 <Button variant="secondary" size="sm" className="w-full" onClick={() => void handleRotate()}>
                   <ArrowsClockwise size={16} className="mr-2" />
-                  Rotasi kelompok
+                  {s.rotateGroups}
                 </Button>
               )}
             </div>
@@ -287,13 +290,13 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
           {singleCoachMode && (
             <p className="mb-4 flex items-center gap-2 text-sm text-[var(--color-field-text-3)]">
               <UsersThree size={18} />
-              Mode satu coach — semua pemain di satu grid
+              {s.singleCoachMode}
             </p>
           )}
 
           {!singleCoachMode && !activeStationId && (
             <p className="mb-4 text-sm text-[var(--color-field-text-3)]">
-              Pilih pos dulu sebelum mulai drill.
+              {s.pickStationFirst}
             </p>
           )}
 
@@ -325,7 +328,7 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
               href={`/session/${sessionId}/review`}
               className="inline-flex min-h-[var(--size-touch-min)] w-full items-center justify-center border-2 border-[var(--color-field-border)] px-4 font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--color-field-text-2)] hover:border-[var(--color-phosphor)] hover:text-[var(--color-phosphor)]"
             >
-              Review hasil sesi
+              {s.reviewSession}
             </Link>
           </div>
         </>

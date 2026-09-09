@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, CircleNotch } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
-import { sessionSchema, type SessionInput } from '@/lib/validators/session';
+import { createSessionSchema, type SessionInput } from '@/lib/validators/session';
+import { useTranslations } from '@/lib/i18n/use-translations';
 import { sessionTypeLabel } from '@/lib/benchmark/battery';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,9 @@ function defaultLocalDateTime(): string {
 
 export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
   const router = useRouter();
+  const { t } = useTranslations();
+  const s = t.sessions;
+  const sessionSchema = useMemo(() => createSessionSchema(t.validation.session), [t.validation.session]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -63,7 +67,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
 
     const parsed = sessionSchema.safeParse(payload);
     if (!parsed.success) {
-      setServerError('Data sesi tidak valid. Periksa kelas dan waktu mulai.');
+      setServerError(t.validation.session.invalidData);
       return;
     }
 
@@ -79,7 +83,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
 
         if (!response.ok) {
           setServerError(
-            data.error ?? 'Gagal menyimpan sesi. Coba lagi dalam beberapa saat.',
+            data.error ?? s.form.saveFailed,
           );
           return;
         }
@@ -88,7 +92,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
         router.refresh();
       } catch {
         setServerError(
-          'Gagal terhubung ke server. Periksa koneksi lalu coba lagi.',
+          t.common.connectionError,
         );
       }
     });
@@ -106,7 +110,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
         )}
       >
         <ArrowLeft size={16} weight="bold" />
-        Kembali
+        {t.common.back}
       </Link>
 
       <motion.div
@@ -116,10 +120,10 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
         className="max-w-md"
       >
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-report-text)] font-[family-name:var(--font-display)]">
-          Buat sesi latihan
+          {s.form.title}
         </h1>
         <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-1 mb-8">
-          Isi kelas, waktu, dan lokasi. Pilih benchmark untuk sesi tes terstandar.
+          {s.form.subtitle}
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
@@ -128,7 +132,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
               htmlFor="sessionType"
               className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]"
             >
-              Tipe sesi
+              {s.sessionType}
             </label>
             <select
               id="sessionType"
@@ -149,12 +153,12 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
               htmlFor="teamId"
               className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]"
             >
-              Kelas
+              {s.team}
             </label>
             <select
               id="teamId"
               disabled={isPending || teams.length === 0}
-              {...register('teamId', { required: 'Kelas wajib dipilih' })}
+              {...register('teamId', { required: '{s.team} wajib dipilih' })}
               className={cn(
                 'h-12 w-full px-4 rounded-[var(--radius-button)] border',
                 'bg-[var(--color-report-surface)] border-[var(--color-report-border)]',
@@ -183,14 +187,14 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
               htmlFor="scheduledStartLocal"
               className="text-sm font-medium text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]"
             >
-              Waktu mulai
+              {s.startTime}
             </label>
             <input
               id="scheduledStartLocal"
               type="datetime-local"
               disabled={isPending}
               {...register('scheduledStartLocal', {
-                required: 'Waktu mulai wajib diisi',
+                required: '{s.startTime} wajib diisi',
               })}
               className={cn(
                 'h-12 w-full px-4 rounded-[var(--radius-button)] border',
@@ -210,11 +214,11 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
           </div>
 
           <Input
-            label="Lokasi"
+            label={s.location}
             theme="report"
-            placeholder="Contoh: GOR Dynasty"
+            placeholder={s.locationPlaceholder}
             disabled={isPending}
-            hint="Opsional — membantu coach mengingat venue latihan."
+            hint={s.form.locationHint}
             error={errors.location?.message}
             {...register('location')}
           />
@@ -240,7 +244,7 @@ export function SessionFormClient({ teams }: { teams: TeamOption[] }) {
                 Menyimpan...
               </>
             ) : (
-              'Simpan sesi'
+              s.saveSession
             )}
           </Button>
         </form>

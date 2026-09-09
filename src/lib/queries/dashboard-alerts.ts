@@ -1,4 +1,7 @@
 import type { AttentionPlayer, WeeklyAttendance } from '@/lib/queries/dashboard';
+import type { DashboardMessages } from '@/lib/i18n/messages/dashboard';
+
+export type DashboardAlertMessages = DashboardMessages['alerts'];
 
 export type DashboardAlert = {
   id: string;
@@ -32,6 +35,7 @@ export function countConsecutiveAbsences(
 export function buildDashboardAlerts(
   attendance: WeeklyAttendance,
   attentionPlayers: AttentionPlayer[],
+  m: DashboardAlertMessages,
 ): DashboardAlert[] {
   const alerts: DashboardAlert[] = [];
 
@@ -40,8 +44,8 @@ export function buildDashboardAlerts(
       id: 'attendance_drop_week',
       type: 'attendance_drop',
       severity: attendance.trend <= -25 ? 'critical' : 'warning',
-      title: 'Kehadiran tim turun',
-      description: `Absensi minggu ini turun ${Math.abs(attendance.trend)}% dibanding minggu lalu (${attendance.pct}% sekarang).`,
+      title: m.attendanceDropTitle,
+      description: m.attendanceDropDesc.replace('{pct}', String(Math.abs(attendance.trend))).replace('{current}', String(attendance.pct)),
     });
   }
 
@@ -52,7 +56,7 @@ export function buildDashboardAlerts(
         type: 'consecutive_absence',
         severity: 'critical',
         playerId: player.id,
-        title: `${player.name} absen beruntun`,
+        title: m.consecutiveAbsenceTitle.replace('{name}', player.name),
         description: player.reason,
         href: `/players/${player.id}`,
       });
@@ -65,7 +69,7 @@ export function buildDashboardAlerts(
         type: 'low_attendance',
         severity: 'warning',
         playerId: player.id,
-        title: `${player.name} perlu perhatian`,
+        title: m.lowAttendanceTitle.replace('{name}', player.name),
         description: player.reason,
         href: `/players/${player.id}`,
       });

@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { ArrowsClockwise } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { signOutAndRedirect } from '@/lib/auth/sign-out';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import { LanguageToggle } from '@/components/i18n/language-toggle';
+import { PageTransition } from '@/components/motion/page-transition';
 
 export default function PlayerLayout({
   children,
@@ -13,6 +16,7 @@ export default function PlayerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { t } = useTranslations();
   const [signingOut, setSigningOut] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -40,9 +44,10 @@ export default function PlayerLayout({
 
       <header className="relative z-20 grid grid-cols-[1fr_auto] items-center gap-2 border-b border-[var(--color-field-border)] px-4 h-14 shrink-0">
         <Link href="/card" className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-phosphor)]">
-          [ Kartu / Pemain ]
+          {t.player.layout.brand}
         </Link>
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <button
             type="button"
             onClick={() => void handleRefresh()}
@@ -56,7 +61,7 @@ export default function PlayerLayout({
             )}
           >
             <ArrowsClockwise size={14} className={refreshing ? 'animate-spin' : undefined} />
-            Perbarui
+            {t.player.layout.refresh}
           </button>
           <button
             type="button"
@@ -70,12 +75,14 @@ export default function PlayerLayout({
               'disabled:opacity-40',
             )}
           >
-            {signingOut ? 'Keluar…' : 'Keluar'}
+            {signingOut ? t.player.layout.signOutPending : t.player.layout.signOut}
           </button>
         </div>
       </header>
 
-      <main className="relative z-10 flex-1">{children}</main>
+      <main className="relative z-10 flex-1">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }

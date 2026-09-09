@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CircleNotch } from '@phosphor-icons/react';
-import { playerSchema, type PlayerInput } from '@/lib/validators/player';
+import { createPlayerSchema, type PlayerInput } from '@/lib/validators/player';
+import { useTranslations } from '@/lib/i18n/use-translations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -107,6 +108,10 @@ export function PlayerFormClient({
   playerId?: string;
 }) {
   const router = useRouter();
+  const { t } = useTranslations();
+  const p = t.players;
+  const f = p.form;
+  const playerSchema = useMemo(() => createPlayerSchema(t.validation.player), [t.validation.player]);
   const [values, setValues] = useState(initial ?? emptyForm(teams[0]?.id));
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -130,7 +135,7 @@ export function PlayerFormClient({
     const payload = toPayload(values);
     const parsed = playerSchema.safeParse(payload);
     if (!parsed.success) {
-      setServerError(parsed.error.issues[0]?.message ?? 'Data pemain tidak valid.');
+      setServerError(parsed.error.issues[0]?.message ?? t.validation.player.invalidData);
       return;
     }
 
@@ -144,7 +149,7 @@ export function PlayerFormClient({
           });
           const data = (await response.json()) as { id?: string; error?: string };
           if (!response.ok) {
-            setServerError(data.error ?? 'Gagal menyimpan pemain.');
+            setServerError(data.error ?? f.saveFailed);
             return;
           }
           router.push(`/players/${data.id}`);
@@ -159,13 +164,13 @@ export function PlayerFormClient({
         });
         const data = (await response.json()) as { error?: string };
         if (!response.ok) {
-          setServerError(data.error ?? 'Gagal memperbarui pemain.');
+          setServerError(data.error ?? f.updateFailed);
           return;
         }
         router.push(`/players/${playerId}`);
         router.refresh();
       } catch {
-        setServerError('Gagal menyimpan. Periksa koneksi lalu coba lagi.');
+        setServerError(f.saveConnectionError);
       }
     });
   }
@@ -177,35 +182,35 @@ export function PlayerFormClient({
         className="inline-flex items-center gap-2 mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--color-report-text-2)] hover:text-[var(--color-report-text)]"
       >
         <ArrowLeft size={16} />
-        Kembali
+        {t.common.back}
       </Link>
 
       <p className="brut-label text-[var(--color-hazard)]">
-        [ Roster / {mode === 'create' ? 'Baru' : 'Edit'} ]
+        {f.rosterBadge.replace('{mode}', mode === 'create' ? f.modeNew : f.modeEdit)}
       </p>
       <h1 className="brut-heading mt-2 mb-6 text-2xl text-[var(--color-report-text)]">
-        {mode === 'create' ? 'Tambah pemain' : 'Edit pemain'}
+        {mode === 'create' ? f.titleNew : f.titleEdit}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           theme="report"
-          label="Nama lengkap"
+          label={f.fullName}
           value={values.fullName}
           onChange={(e) => setValues((v) => ({ ...v, fullName: e.target.value }))}
           required
         />
         <Input
           theme="report"
-          label="Nama panggilan"
+          label={f.nickname}
           value={values.nickname}
           onChange={(e) => setValues((v) => ({ ...v, nickname: e.target.value }))}
-          hint="Muncul di layar lapangan — unik per kelas"
+          hint={f.nicknameHint}
           required
         />
         <Input
           theme="report"
-          label="Tanggal lahir"
+          label={f.birthDate}
           type="date"
           value={values.birthDate}
           onChange={(e) => setValues((v) => ({ ...v, birthDate: e.target.value }))}
@@ -214,7 +219,7 @@ export function PlayerFormClient({
         <div className="grid grid-cols-2 gap-3">
           <Input
             theme="report"
-            label="Nomor punggung"
+            label={f.jerseyNumber}
             type="number"
             min={0}
             max={99}
@@ -223,14 +228,14 @@ export function PlayerFormClient({
           />
           <Input
             theme="report"
-            label="Posisi"
+            label={f.position}
             value={values.position}
             onChange={(e) => setValues((v) => ({ ...v, position: e.target.value }))}
           />
         </div>
         <div>
           <label className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
-            Tangan dominan
+            {f.dominantHand}
           </label>
           <select
             value={values.dominantHand}
@@ -243,26 +248,26 @@ export function PlayerFormClient({
             className={selectClassName()}
           >
             <option value="">—</option>
-            <option value="right">Kanan</option>
-            <option value="left">Kiri</option>
-            <option value="both">Kedua tangan</option>
+            <option value="right">{f.handRight}</option>
+            <option value="left">{f.handLeft}</option>
+            <option value="both">{f.handBoth}</option>
           </select>
         </div>
         <Input
           theme="report"
-          label="Sekolah"
+          label={f.school}
           value={values.school}
           onChange={(e) => setValues((v) => ({ ...v, school: e.target.value }))}
         />
         <Input
           theme="report"
-          label="Nama wali"
+          label={f.guardianName}
           value={values.guardianName}
           onChange={(e) => setValues((v) => ({ ...v, guardianName: e.target.value }))}
         />
         <Input
           theme="report"
-          label="Telepon wali"
+          label={f.guardianPhone}
           type="tel"
           value={values.guardianPhone}
           onChange={(e) => setValues((v) => ({ ...v, guardianPhone: e.target.value }))}
@@ -270,7 +275,7 @@ export function PlayerFormClient({
 
         <div>
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
-            Kelas
+            {f.teams}
           </p>
           <div className="space-y-2 border-2 border-[var(--color-report-border)] p-3">
             {teams.map((team) => (
@@ -293,7 +298,7 @@ export function PlayerFormClient({
         {mode === 'edit' && (
           <div>
             <label className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
-              Status
+              {f.status}
             </label>
             <select
               value={values.status}
@@ -305,8 +310,8 @@ export function PlayerFormClient({
               }
               className={selectClassName()}
             >
-              <option value="active">Aktif</option>
-              <option value="inactive">Nonaktif</option>
+              <option value="active">{t.common.active}</option>
+              <option value="inactive">{t.common.inactive}</option>
             </select>
           </div>
         )}
@@ -319,9 +324,9 @@ export function PlayerFormClient({
           {isPending ? (
             <CircleNotch className="animate-spin" size={16} />
           ) : mode === 'create' ? (
-            'Simpan pemain'
+            f.savePlayer
           ) : (
-            'Simpan perubahan'
+            f.saveChanges
           )}
         </Button>
       </form>

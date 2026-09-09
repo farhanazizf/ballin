@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { StatNumber } from '@/components/ui/stat-number';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 type Flash = { type: 'success' | 'error' | 'info'; message: string };
 
@@ -27,16 +28,16 @@ function nextManualStatus(current: AttendanceStatus | null): AttendanceStatus | 
   return MANUAL_CYCLE[nextIndex] ?? null;
 }
 
-function statusLabel(status: AttendanceStatus | null): string {
+function statusLabel(status: AttendanceStatus | null, labels: { present: string; late: string; absent: string; notYet: string }): string {
   switch (status) {
     case 'present':
-      return 'Hadir';
+      return labels.present;
     case 'late':
-      return 'Terlambat';
+      return labels.late;
     case 'absent':
-      return 'Absen';
+      return labels.absent;
     default:
-      return 'Belum';
+      return labels.notYet;
   }
 }
 
@@ -64,6 +65,9 @@ export function AttendanceClient({
   teamName: string;
   coachId: string;
 }) {
+  const { t } = useTranslations();
+  const a = t.field.attendance;
+  const statusLabels = { present: t.common.present, late: t.common.late, absent: t.common.absent, notYet: t.common.notYet };
   const [roster, setRoster] = useState<AttendanceSetupPlayer[]>([]);
   const [flash, setFlash] = useState<Flash | null>(null);
   const [ready, setReady] = useState(false);
@@ -152,7 +156,7 @@ export function AttendanceClient({
 
         setFlash({
           type: 'error',
-          message: 'Data absensi belum tersimpan di HP. Sambungkan internet lalu buka halaman ini sekali.',
+          message: a.loadOffline,
         });
       } catch {
         const cached = await loadCachedAttendanceSetup(sessionId);
@@ -161,7 +165,7 @@ export function AttendanceClient({
         } else {
           setFlash({
             type: 'error',
-            message: 'Gagal memuat data sesi. Periksa koneksi lalu muat ulang.',
+            message: a.loadFailed,
           });
         }
       }
@@ -205,7 +209,7 @@ export function AttendanceClient({
 
         if (method === 'qr' && status === 'present') {
           const nickname = rosterMap.get(playerId)?.nickname ?? 'Pemain';
-          setFlash({ type: 'success', message: `${nickname} hadir` });
+          setFlash({ type: 'success', message: a.presentFlash.replace('{name}', nickname) });
           setTimeout(() => setFlash(null), 1200);
         }
 
@@ -218,7 +222,7 @@ export function AttendanceClient({
         }
         setFlash({
           type: 'error',
-          message: 'Gagal mencatat absensi. Coba lagi.',
+          message: a.saveFailed,
         });
         return false;
       } finally {
@@ -234,21 +238,21 @@ export function AttendanceClient({
       if (!card) {
         setFlash({
           type: 'error',
-          message: 'Kartu tidak dikenali. Periksa kartu atau tandai manual.',
+          message: a.cardUnknown,
         });
         return;
       }
 
       const player = rosterMap.get(card.playerId);
       if (!player) {
-        setFlash({ type: 'error', message: 'Pemain tidak terdaftar di kelas sesi ini.' });
+        setFlash({ type: 'error', message: a.playerNotInTeam });
         return;
       }
 
       if (isPresentStatus(player.status)) {
         setFlash({
           type: 'info',
-          message: `${player.nickname} sudah tercatat ${statusLabel(player.status).toLowerCase()}.`,
+          message: a.alreadyRecorded.replace('{name}', player.nickname).replace('{status}', statusLabel(player.status, statusLabels).toLowerCase()),
         });
         return;
       }
@@ -267,7 +271,7 @@ export function AttendanceClient({
       if (!nextStatus) {
         setFlash({
           type: 'info',
-          message: 'Untuk menghapus absensi, hubungi admin.',
+          message: a.removeHint,
         });
         return;
       }
@@ -291,10 +295,10 @@ export function AttendanceClient({
         <p className="font-[family-name:var(--font-ui)] text-sm text-[var(--color-field-text-3)]">
           {teamName}
         </p>
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold">Absensi</h1>
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold">{a.title}</h1>
         {offlineOnly && (
           <p className="font-[family-name:var(--font-ui)] text-sm text-[var(--color-field-text-2)]">
-            Perubahan tersimpan di HP dan akan dikirim saat online.
+            {a.offlineHint}
           </p>
         )}
       </header>
@@ -304,7 +308,7 @@ export function AttendanceClient({
           <StatNumber
             value={presentCount}
             suffix={`/ ${roster.length}`}
-            label="Hadir"
+            label={a.presentLabel}
             size="large"
             theme="field"
           />
@@ -339,16 +343,16 @@ export function AttendanceClient({
         <section className="space-y-3">
           <div>
             <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold">
-              Tanpa kartu / belum scan
+              {a.noCardSection}
             </h2>
             <p className="mt-1 text-sm text-[var(--color-field-text-3)]">
-              Ketuk nama untuk tandai hadir, terlambat, atau absen.
+              {a.noCardHint}
             </p>
           </div>
 
           {manualPlayers.length === 0 ? (
             <div className="rounded-[var(--radius-card)] border border-[var(--color-field-border)] bg-[var(--color-field-surface)] px-4 py-6 text-center text-sm text-[var(--color-field-text-2)]">
-              Semua pemain sudah tercatat.
+              {a.allRecorded}
             </div>
           ) : (
             <ul className="space-y-2">
@@ -375,8 +379,8 @@ export function AttendanceClient({
                         {player.nickname}
                       </p>
                       <p className="truncate text-sm text-[var(--color-field-text-3)]">
-                        {player.jerseyNumber != null ? `#${player.jerseyNumber}` : 'Tanpa nomor'}
-                        {!player.hasCard ? ' · belum punya kartu' : ''}
+                        {player.jerseyNumber != null ? `#${player.jerseyNumber}` : a.noNumber}
+                        {!player.hasCard ? ` · ${a.noCard}` : ''}
                       </p>
                     </div>
                     <span
@@ -385,7 +389,7 @@ export function AttendanceClient({
                         statusClass(player.status),
                       )}
                     >
-                      {statusLabel(player.status)}
+                      {statusLabel(player.status, statusLabels)}
                     </span>
                   </button>
                 </li>
@@ -398,7 +402,7 @@ export function AttendanceClient({
       <footer className="border-t border-[var(--color-field-border)] p-4">
         <Link href={`/session/${sessionId}/stations`} className="block w-full">
           <Button variant="primary" size="field" className="w-full">
-            Lanjut ke pos
+            {a.continueToStations}
             <ArrowRight size={20} weight="bold" />
           </Button>
         </Link>

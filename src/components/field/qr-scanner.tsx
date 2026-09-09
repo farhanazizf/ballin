@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { cn } from '@/lib/utils';
 import { parseQrPayload } from '@/lib/field/qr';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 type QrScannerProps = {
   onScan: (token: string) => void;
@@ -12,6 +13,7 @@ type QrScannerProps = {
 };
 
 export function QrScanner({ onScan, onError, className }: QrScannerProps) {
+  const { t } = useTranslations();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [active, setActive] = useState(false);
   const lastTokenRef = useRef<{ token: string; at: number } | null>(null);
@@ -48,7 +50,7 @@ export function QrScanner({ onScan, onError, className }: QrScannerProps) {
           onScan(parsed.token);
         });
       } catch {
-        onError('Kamera tidak bisa dibuka. Izinkan akses kamera di pengaturan browser.');
+        onError(t.field.qrScanner.cameraError);
         setActive(false);
       }
     }
@@ -58,10 +60,10 @@ export function QrScanner({ onScan, onError, className }: QrScannerProps) {
     return () => {
       cancelled = true;
       const stream = videoRef.current?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach((t) => t.stop());
+      stream?.getTracks().forEach((track) => track.stop());
       setActive(false);
     };
-  }, [onScan, onError]);
+  }, [onScan, onError, t.field.qrScanner.cameraError]);
 
   return (
     <div className={cn('relative overflow-hidden rounded-[var(--radius-panel)] bg-black', className)}>
@@ -69,7 +71,7 @@ export function QrScanner({ onScan, onError, className }: QrScannerProps) {
       <div className="absolute inset-0 pointer-events-none border-2 border-[var(--color-made)]/40 m-8 rounded-none" />
       {!active && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-sm text-white font-[family-name:var(--font-ui)]">
-          Membuka kamera...
+          {t.field.qrScanner.openingCamera}
         </div>
       )}
     </div>

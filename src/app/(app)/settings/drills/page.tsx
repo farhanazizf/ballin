@@ -2,9 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Barbell } from '@phosphor-icons/react/dist/ssr';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/ui/empty-state';
+import { getServerMessages } from '@/lib/i18n/server';
 import { DrillsSettingsClient, type DrillRow } from './drills-settings-client';
 
 export default async function DrillsSettingsPage() {
+  const t = await getServerMessages();
   const supabase = (await createServerSupabaseClient()) as SupabaseClient;
   const {
     data: { user },
@@ -15,8 +17,8 @@ export default async function DrillsSettingsPage() {
       <Shell>
         <EmptyState
           icon={<Barbell size={28} weight="duotone" />}
-          title="Sesi belum aktif"
-          description="Masuk ulang untuk melihat drill."
+          title={t.common.sessionInactive}
+          description={t.settings.drills.inactiveDesc}
           theme="report"
         />
       </Shell>
@@ -34,8 +36,8 @@ export default async function DrillsSettingsPage() {
       <Shell>
         <EmptyState
           icon={<Barbell size={28} weight="duotone" />}
-          title="Profil belum lengkap"
-          description="Hubungi admin Dynasty."
+          title={t.common.profileIncomplete}
+          description={t.settings.drills.profileIncompleteDesc}
           theme="report"
         />
       </Shell>
@@ -62,9 +64,9 @@ export default async function DrillsSettingsPage() {
 
   return (
     <Shell>
-      <p className="brut-label text-[var(--color-hazard)]">[ Settings / Drills ]</p>
+      <p className="brut-label text-[var(--color-hazard)]">{t.settings.drills.badge}</p>
       <h1 className="brut-heading mt-2 text-2xl text-[var(--color-report-text)] mb-6">
-        Drill library
+        {t.settings.drills.title}
       </h1>
       <DrillsSettingsClient
         drills={rows}

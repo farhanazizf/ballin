@@ -19,7 +19,7 @@ import {
 } from '@/lib/queries/players';
 import { formatDate, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button';
+import { getServerMessages } from '@/lib/i18n/server';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -32,10 +32,19 @@ const cardClass = cn(
   'p-5 md:p-6',
 );
 
-function dominantHandLabel(hand: string | null): string {
-  if (hand === 'left') return 'Kiri';
-  if (hand === 'right') return 'Kanan';
-  if (hand === 'both') return 'Kedua tangan';
+const reportSecondaryLinkClass = cn(
+  'inline-flex items-center justify-center gap-2',
+  'font-mono text-xs font-semibold uppercase tracking-[0.1em]',
+  'rounded-none border-2 h-9 px-3',
+  'border-[var(--color-report-border)] bg-transparent text-[var(--color-report-text)]',
+  'hover:bg-[var(--color-report-text)] hover:text-[var(--color-phosphor)]',
+  'transition-[color,background-color,border-color,transform] duration-200',
+);
+
+function dominantHandLabel(hand: string | null, d: Awaited<ReturnType<typeof getServerMessages>>['players']['detail']): string {
+  if (hand === 'left') return d.handLeft;
+  if (hand === 'right') return d.handRight;
+  if (hand === 'both') return d.handBoth;
   return '—';
 }
 
@@ -44,12 +53,12 @@ function formatMeasurement(value: number | null, unit: string): string {
   return `${value} ${unit}`;
 }
 
-function attendanceStatusLabel(status: string): string {
-  if (status === 'present') return 'Hadir';
-  if (status === 'late') return 'Terlambat';
-  if (status === 'excused') return 'Izin';
-  if (status === 'sick') return 'Sakit';
-  if (status === 'absent') return 'Absen';
+function attendanceStatusLabel(status: string, d: Awaited<ReturnType<typeof getServerMessages>>['players']['detail']): string {
+  if (status === 'present') return d.statusPresent;
+  if (status === 'late') return d.statusLate;
+  if (status === 'excused') return d.statusExcused;
+  if (status === 'sick') return d.statusSick;
+  if (status === 'absent') return d.statusAbsent;
   return status;
 }
 
@@ -71,6 +80,9 @@ const ATTRIBUTE_LABELS = [
 
 export default async function PlayerDetailPage({ params }: PageProps) {
   const { id } = await params;
+  const t = await getServerMessages();
+  const p = t.players;
+  const d = p.detail;
   const supabase = (await createServerSupabaseClient()) as SupabaseClient;
   const player = await getPlayerDetail(supabase, id);
 
@@ -98,7 +110,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
         )}
       >
         <ArrowLeft size={18} />
-        Daftar pemain
+        {d.backToList}
       </Link>
 
       <header className="mb-6 flex items-start gap-4">
@@ -128,12 +140,9 @@ export default async function PlayerDetailPage({ params }: PageProps) {
             </h1>
             <Link
               href={`/players/${player.id}/edit`}
-              className={cn(
-                buttonVariants({ variant: 'report-secondary', size: 'sm' }),
-                'ml-auto sm:ml-0',
-              )}
+              className={cn(reportSecondaryLinkClass, 'ml-auto sm:ml-0')}
             >
-              Edit
+              {t.common.edit}
             </Link>
             {player.jerseyNumber != null && (
               <Badge variant="report-default" size="md">
@@ -158,16 +167,16 @@ export default async function PlayerDetailPage({ params }: PageProps) {
 
       <section className={cn(cardClass, 'mb-4')}>
         <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide mb-4">
-          Profil
+          {d.profile}
         </h2>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-          <ProfileField label="Usia" value={player.age != null ? `${player.age} tahun` : '—'} />
-          <ProfileField label="Posisi" value={player.position ?? '—'} />
-          <ProfileField label="Tangan dominan" value={dominantHandLabel(player.dominantHand)} />
-          <ProfileField label="Sekolah" value={player.school ?? '—'} />
-          <ProfileField label="Bergabung" value={formatDate(player.joinedAt)} />
+          <ProfileField label={d.age} value={player.age != null ? `${player.age} ${t.common.yearsOld}` : '—'} />
+          <ProfileField label={d.position} value={player.position ?? '—'} />
+          <ProfileField label={d.dominantHand} value={dominantHandLabel(player.dominantHand, d)} />
+          <ProfileField label={d.school} value={player.school ?? '—'} />
+          <ProfileField label={d.joined} value={formatDate(player.joinedAt)} />
           <ProfileField
-            label="Kehadiran (12 sesi)"
+            label={d.attendance12}
             value={`${player.attendanceRate}%`}
           />
         </dl>
@@ -177,47 +186,43 @@ export default async function PlayerDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-2 mb-4">
           <Ruler size={18} className="text-[var(--color-report-text-3)]" />
           <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide">
-            Ukuran tubuh terbaru
+            {d.measurementsTitle}
           </h2>
         </div>
 
         <Link
           href={`/players/${player.id}/measurements`}
-          className={cn(
-            buttonVariants({ variant: 'report-secondary', size: 'sm' }),
-            'mb-4',
-          )}
+          className={cn(reportSecondaryLinkClass, 'mb-4')}
         >
-          Catat / lihat riwayat
+          {d.measurementsLink}
         </Link>
         {player.measurements ? (
           <>
             <p className="text-xs text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] mb-4">
-              Diukur {formatDate(player.measurements.measuredOn)}
+              {d.measuredOn.replace('{date}', formatDate(player.measurements.measuredOn))}
             </p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
               <ProfileField
-                label="Tinggi"
+                label={d.height}
                 value={formatMeasurement(player.measurements.heightCm, 'cm')}
               />
               <ProfileField
-                label="Berat"
+                label={d.weight}
                 value={formatMeasurement(player.measurements.weightKg, 'kg')}
               />
               <ProfileField
-                label="Rentang sayap"
+                label={d.wingspan}
                 value={formatMeasurement(player.measurements.wingspanCm, 'cm')}
               />
               <ProfileField
-                label="Jangkauan berdiri"
+                label={d.standingReach}
                 value={formatMeasurement(player.measurements.standingReachCm, 'cm')}
               />
             </dl>
           </>
         ) : (
           <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] leading-relaxed">
-            Belum ada data ukuran tubuh. Catat pengukuran di menu ukuran pemain setelah latihan
-            pertama.
+            {d.noMeasurements}
           </p>
         )}
       </section>
@@ -227,7 +232,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <ChartLineUp size={18} className="text-[var(--color-report-text-3)]" />
             <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide">
-              Atribut terbaru
+              {d.attributesTitle}
             </h2>
             {attributes.archetype ? (
               <Badge variant="leather" size="sm">
@@ -236,8 +241,12 @@ export default async function PlayerDetailPage({ params }: PageProps) {
             ) : null}
           </div>
           <p className="text-xs text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] mb-4">
-            Periode {formatDate(attributes.periodStart)}
-            {attributes.periodEnd ? ` – ${formatDate(attributes.periodEnd)}` : ''}
+            {d.period
+              .replace('{start}', formatDate(attributes.periodStart))
+              .replace(
+                '{end}',
+                attributes.periodEnd ? d.periodEnd.replace('{end}', formatDate(attributes.periodEnd)) : '',
+              )}
           </p>
           <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-4">
             {ATTRIBUTE_LABELS.map(({ key, label }) => (
@@ -252,13 +261,13 @@ export default async function PlayerDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-2 mb-4">
             <Phone size={18} className="text-[var(--color-report-text-3)]" />
             <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide">
-              Kontak wali
+              {d.guardianTitle}
             </h2>
           </div>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
-            <ProfileField label="Nama wali" value={player.guardianName ?? '—'} />
+            <ProfileField label={d.guardianName} value={player.guardianName ?? '—'} />
             <ProfileField
-              label="Telepon"
+              label={d.phone}
               value={
                 player.guardianPhone ? (
                   <a
@@ -280,7 +289,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-2 mb-4">
           <CalendarCheck size={18} className="text-[var(--color-report-text-3)]" />
           <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide">
-            Riwayat absensi
+            {d.attendanceHistory}
           </h2>
         </div>
 
@@ -300,20 +309,20 @@ export default async function PlayerDetailPage({ params }: PageProps) {
                     {formatDate(item.sessionDate)}
                   </span>
                   <span className="text-xs text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)]">
-                    {attendanceStatusLabel(item.status)}
+                    {attendanceStatusLabel(item.status, d)}
                   </span>
                 </li>
               ))}
             </ul>
             {player.recentAbsences >= 3 ? (
               <p className="mt-4 text-xs text-[var(--color-miss)] font-[family-name:var(--font-ui)]">
-                {player.recentAbsences} absen dalam 12 sesi terakhir — perlu follow-up.
+                {d.absenceFollowUp.replace('{count}', String(player.recentAbsences))}
               </p>
             ) : null}
           </>
         ) : (
           <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] leading-relaxed">
-            Belum ada riwayat absensi tercatat.
+            {d.noAttendanceHistory}
           </p>
         )}
       </section>
@@ -322,7 +331,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-2 mb-4">
           <ChartLineUp size={18} className="text-[var(--color-report-text-3)]" />
           <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide">
-            Tren drill
+            {d.drillTrends}
           </h2>
         </div>
 
@@ -353,7 +362,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
           </div>
         ) : (
           <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] leading-relaxed">
-            Belum ada hasil drill tercatat untuk pemain ini.
+            {d.noDrillTrends}
           </p>
         )}
       </section>
@@ -362,11 +371,11 @@ export default async function PlayerDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-2 mb-2">
           <Key size={18} className="text-[var(--color-report-text-3)]" />
           <h2 className="text-sm font-semibold text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] uppercase tracking-wide">
-            Akun pemain
+            {d.accountTitle}
           </h2>
         </div>
         <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mb-4 leading-relaxed">
-          Atur username dan PIN agar pemain bisa masuk ke kartu digital mereka.
+          {d.accountDesc}
         </p>
         <Link
           href={`/players/${player.id}/credentials`}
@@ -378,7 +387,7 @@ export default async function PlayerDetailPage({ params }: PageProps) {
             'w-full sm:w-auto',
           )}
         >
-          Kelola kredensial
+          {d.manageCredentials}
         </Link>
       </section>
     </div>

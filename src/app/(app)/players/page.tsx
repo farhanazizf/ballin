@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { UsersThree, MagnifyingGlass, CaretRight } from '@phosphor-icons/react/dist/ssr';
+import { UsersThree, MagnifyingGlass } from '@phosphor-icons/react/dist/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCoachTeamIds } from '@/lib/queries/dashboard';
 import { getPlayersForOrg } from '@/lib/queries/players';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getServerMessages } from '@/lib/i18n/server';
+import { PlayersList } from './players-list';
 
 type PageProps = {
   searchParams: Promise<{ q?: string; team?: string }>;
@@ -20,6 +21,8 @@ const cardClass = cn(
 
 export default async function PlayersPage({ searchParams }: PageProps) {
   const { q, team } = await searchParams;
+  const t = await getServerMessages();
+  const p = t.players;
   const supabase = (await createServerSupabaseClient()) as SupabaseClient;
 
   const {
@@ -31,8 +34,8 @@ export default async function PlayersPage({ searchParams }: PageProps) {
       <PageShell>
         <EmptyState
           icon={<UsersThree size={28} weight="duotone" />}
-          title="Sesi belum aktif"
-          description="Masuk ulang dengan akun coach untuk melihat daftar pemain."
+          title={t.common.sessionInactive}
+          description={p.sessionInactiveDesc}
           theme="report"
         />
       </PageShell>
@@ -50,8 +53,8 @@ export default async function PlayersPage({ searchParams }: PageProps) {
       <PageShell>
         <EmptyState
           icon={<UsersThree size={28} weight="duotone" />}
-          title="Profil belum lengkap"
-          description="Akun Anda belum terhubung ke organisasi. Hubungi admin Dynasty untuk aktivasi."
+          title={t.common.profileIncomplete}
+          description={p.profileIncompleteDesc}
           theme="report"
         />
       </PageShell>
@@ -92,13 +95,13 @@ export default async function PlayersPage({ searchParams }: PageProps) {
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)]">
-            {organization?.name ?? 'Akademi'}
+            {organization?.name ?? t.common.academy}
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-report-text)] font-[family-name:var(--font-display)] mt-0.5">
-            Pemain
+            {p.title}
           </h1>
           <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-1">
-            {players.length} pemain aktif
+            {p.activeCount.replace('{count}', String(players.length))}
           </p>
         </div>
         <Link
@@ -110,7 +113,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
             'hover:bg-transparent hover:text-[var(--color-hazard)] transition-colors',
           )}
         >
-          Tambah pemain
+          {p.addPlayer}
         </Link>
       </header>
 
@@ -124,7 +127,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
             type="search"
             name="q"
             defaultValue={q ?? ''}
-            placeholder="Cari nama, nomor punggung, atau kelas"
+            placeholder={p.searchPlaceholder}
             className={cn(
               'w-full h-12 pl-10 pr-4 rounded-[var(--radius-button)]',
               'bg-[var(--color-report-bg)] border border-[var(--color-report-border)]',
@@ -146,7 +149,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
               'focus:outline-none focus:ring-2 focus:ring-[var(--color-leather)]/30',
             )}
           >
-            <option value="">Semua kelas</option>
+            <option value="">{p.allTeams}</option>
             {(teams ?? []).map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -164,71 +167,27 @@ export default async function PlayersPage({ searchParams }: PageProps) {
             'hover:bg-[var(--color-leather-deep)] transition-colors',
           )}
         >
-          Terapkan filter
+          {t.common.applyFilter}
         </button>
       </form>
 
       {players.length === 0 ? (
         <EmptyState
           icon={<UsersThree size={28} weight="duotone" />}
-          title={hasFilters ? 'Pemain tidak ditemukan' : 'Belum ada pemain'}
-          description={
-            hasFilters
-              ? 'Coba ubah kata kunci atau pilih kelas lain. Filter bisa direset dengan kosongkan pencarian.'
-              : 'Tambahkan pemain lewat menu kelola roster. Daftar akan muncul di sini setelah data dimasukkan.'
-          }
+          title={hasFilters ? p.notFoundTitle : p.emptyTitle}
+          description={hasFilters ? p.notFoundDesc : p.emptyDesc}
           theme="report"
         />
       ) : (
-        <ul className={cn(cardClass, 'divide-y divide-[var(--color-report-border)] overflow-hidden')}>
-          {players.map((player) => (
-            <li key={player.id}>
-              <Link
-                href={`/players/${player.id}`}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-4 min-h-[var(--size-touch-min)]',
-                  'hover:bg-[var(--color-report-bg)] transition-colors',
-                  'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--color-focus)]',
-                )}
-              >
-                <div
-                  className={cn(
-                    'shrink-0 w-11 h-11 rounded-[var(--radius-button)]',
-                    'bg-[var(--color-report-bg)] border border-[var(--color-report-border)]',
-                    'flex items-center justify-center',
-                    'font-[family-name:var(--font-display)] font-semibold text-[var(--color-report-text)] tabular-nums',
-                  )}
-                >
-                  {player.jerseyNumber ?? '—'}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-[family-name:var(--font-display)] font-semibold text-[var(--color-report-text)] truncate">
-                    {player.nickname}
-                  </p>
-                  <p className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] truncate mt-0.5">
-                    {player.fullName}
-                  </p>
-                  {player.teamNames.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {player.teamNames.map((teamName) => (
-                        <Badge key={teamName} variant="leather" size="sm">
-                          {teamName}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <CaretRight
-                  size={18}
-                  className="shrink-0 text-[var(--color-report-text-3)]"
-                  aria-hidden
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <PlayersList
+          players={players.map((player) => ({
+            id: player.id,
+            nickname: player.nickname,
+            fullName: player.fullName,
+            jerseyNumber: player.jerseyNumber,
+            teamNames: player.teamNames,
+          }))}
+        />
       )}
     </PageShell>
   );

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { WarningCircle } from '@phosphor-icons/react/dist/ssr';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServerMessages } from '@/lib/i18n/server';
 import {
   buildRadarData,
   getAttendanceStreak,
@@ -15,6 +16,7 @@ import {
 import { PlayerCardClient } from './card-client';
 
 export default async function PlayerCardPage() {
+  const t = await getServerMessages();
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -31,8 +33,8 @@ export default async function PlayerCardPage() {
       <EmptyState
         theme="field"
         icon={<WarningCircle size={28} weight="duotone" />}
-        title="Profil pemain belum terhubung"
-        description="Hubungi coach atau admin akademi untuk menghubungkan akun login dengan data pemainmu."
+        title={t.player.card.profileNotLinked.title}
+        description={t.player.card.profileNotLinked.description}
       />
     );
   }
@@ -52,8 +54,8 @@ export default async function PlayerCardPage() {
       <EmptyState
         theme="field"
         icon={<WarningCircle size={28} weight="duotone" />}
-        title="Data pemain tidak ditemukan"
-        description="Coba keluar lalu masuk lagi. Jika masalah berlanjut, hubungi coach."
+        title={t.player.card.notFound.title}
+        description={t.player.card.notFound.description}
       />
     );
   }

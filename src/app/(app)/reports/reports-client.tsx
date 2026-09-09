@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatDate } from '@/lib/utils';
 import type { ReportListItem } from '@/lib/queries/reports';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 export function ReportsClient({
   reports,
@@ -17,6 +18,8 @@ export function ReportsClient({
   players: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
+  const { t } = useTranslations();
+  const r = t.reports;
   const [playerId, setPlayerId] = useState(players[0]?.id ?? '');
   const [periodStart, setPeriodStart] = useState('2026-08-01');
   const [periodEnd, setPeriodEnd] = useState('2026-08-31');
@@ -25,7 +28,7 @@ export function ReportsClient({
 
   function generate() {
     if (!playerId) {
-      setError('Pilih pemain terlebih dahulu.');
+      setError(r.selectPlayer);
       return;
     }
     startTransition(async () => {
@@ -38,7 +41,7 @@ export function ReportsClient({
       });
       const body = (await res.json()) as { id?: string; error?: string };
       if (!res.ok) {
-        setError(body.error ?? 'Gagal membuat draf rapor.');
+        setError(body.error ?? r.generateFailed);
         return;
       }
       router.refresh();
@@ -65,12 +68,12 @@ export function ReportsClient({
   return (
     <div className="min-h-[100dvh] px-4 py-6 md:px-8 md:py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-[var(--color-report-text)] font-[family-name:var(--font-display)]">Rapor pemain</h1>
-        <p className="text-sm text-[var(--color-report-text-2)] mt-1">Generate draf AI, review, lalu setujui untuk pemain</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-report-text)] font-[family-name:var(--font-display)]">{r.title}</h1>
+        <p className="text-sm text-[var(--color-report-text-2)] mt-1">{r.subtitle}</p>
       </header>
 
       <section className="border-2 border-[var(--color-report-border)] bg-[var(--color-report-surface)] p-5 mb-8 space-y-4">
-        <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">Buat draf rapor</h2>
+        <h2 className="font-mono text-xs uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">{r.createDraft}</h2>
         {error ? <p className="text-sm text-[var(--color-miss)]">{error}</p> : null}
         <select value={playerId} onChange={(e) => setPlayerId(e.target.value)} className="h-12 w-full px-4 border border-[var(--color-report-border)]">
           {players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -80,12 +83,12 @@ export function ReportsClient({
           <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="h-12 px-4 border border-[var(--color-report-border)]" />
         </div>
         <Button variant="report-primary" disabled={isPending} onClick={generate} className="w-full">
-          {isPending ? <><CircleNotch className="animate-spin" size={18} /> Membuat draf...</> : 'Generate draf rapor'}
+          {isPending ? <><CircleNotch className="animate-spin" size={18} /> Membuat draf...</> : r.generateDraft}
         </Button>
       </section>
 
       {reports.length === 0 ? (
-        <EmptyState icon={<FileText size={28} weight="duotone" />} title="Belum ada rapor" description="Generate draf rapor untuk pemain di tim Anda." theme="report" />
+        <EmptyState icon={<FileText size={28} weight="duotone" />} title={r.emptyTitle} description={r.emptyDesc} theme="report" />
       ) : (
         <ul className="space-y-3">
           {reports.map((report) => (
@@ -97,9 +100,9 @@ export function ReportsClient({
               <div className="flex items-center gap-2">
                 <Badge variant={report.status === 'approved' ? 'leather' : 'report-default'} size="sm">{report.status}</Badge>
                 {report.status === 'draft' ? (
-                  <Button variant="report-secondary" size="sm" disabled={isPending} onClick={() => void approve(report.id, report)}>Setujui</Button>
+                  <Button variant="report-secondary" size="sm" disabled={isPending} onClick={() => void approve(report.id, report)}>{r.approve}</Button>
                 ) : null}
-                <a href={`/api/reports/${report.id}/pdf`} className="text-xs text-[var(--color-leather)] underline">PDF</a>
+                <a href={`/api/reports/${report.id}/pdf`} className="text-xs text-[var(--color-leather)] underline">{r.pdf}</a>
               </div>
             </li>
           ))}

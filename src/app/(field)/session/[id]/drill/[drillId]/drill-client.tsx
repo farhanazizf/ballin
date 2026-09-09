@@ -8,6 +8,7 @@ import { cacheFieldBootstrap } from '@/lib/field/bootstrap';
 import { DrillInputShell, type DrillType } from '@/components/field/drill-input-shell';
 import type { DrillGridPlayer } from '@/components/field/drill-grid';
 import { db } from '@/lib/db';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 export function DrillClient({
   sessionId,
@@ -18,6 +19,8 @@ export function DrillClient({
   drillId: string;
   coachId: string;
 }) {
+  const { t } = useTranslations();
+  const d = t.field.drill;
   const searchParams = useSearchParams();
   const stationId = searchParams.get('stationId');
   const [sessionDrillId, setSessionDrillId] = useState<string | null>(null);
@@ -38,7 +41,7 @@ export function DrillClient({
         credentials: 'include',
       });
       if (!bootstrapRes.ok) {
-        setError('Gagal memuat data sesi.');
+        setError(d.loadFailed);
         return;
       }
       const data = await bootstrapRes.json();
@@ -61,7 +64,7 @@ export function DrillClient({
       setPlayers(roster);
 
       const drill = data.drills.find((d: { id: string }) => d.id === drillId);
-      setDrillName(drill?.name ?? 'Drill');
+      setDrillName(drill?.name ?? d.defaultName);
       setDrillType((drill?.type as DrillType) ?? 'attempt');
       setTarget(drill?.defaultTarget ?? undefined);
       setUnit(drill?.unit ?? undefined);
@@ -101,7 +104,7 @@ export function DrillClient({
         body: JSON.stringify({ sessionId, drillId, stationId: stationId ?? undefined }),
       });
       if (!sdRes.ok) {
-        setError('Gagal menyiapkan drill sesi.');
+        setError(d.setupFailed);
         return;
       }
       const sd = await sdRes.json();
@@ -116,7 +119,7 @@ export function DrillClient({
         startedAt: sd.startedAt,
       });
       } catch {
-        setError('Gagal menyiapkan drill. Tarik ulang halaman.');
+        setError(d.setupRetry);
       }
     }
 

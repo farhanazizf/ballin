@@ -4,6 +4,7 @@ import {
   useState,
   useRef,
   useCallback,
+  useMemo,
   useTransition,
   type KeyboardEvent,
   type ClipboardEvent,
@@ -14,28 +15,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { CircleNotch } from '@phosphor-icons/react';
 import Link from 'next/link';
-import { playerLoginSchema, type PlayerLoginInput } from '@/lib/validators/auth';
+import { createPlayerLoginSchema, type PlayerLoginInput } from '@/lib/validators/auth';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import { LanguageToggle } from '@/components/i18n/language-toggle';
 import { cn } from '@/lib/utils';
+import { AuthFormPanel, AuthHeroPanel, AuthHeroTitle } from '@/components/motion/auth-hero-panel';
+import { AuthQuoteRotator } from '@/components/motion/auth-quote-rotator';
+import { PLAYER_ATHLETE_QUOTES } from '@/lib/constants/athlete-quotes';
 
 const PIN_LENGTH = 6;
 const UNIT_ID = 'DBA-KRW';
 const REV = 'REV 1.0';
-
-async function handlePlayerLogin(data: PlayerLoginInput) {
-  const res = await fetch('/api/auth/player', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-
-  const body = await res.json();
-
-  if (!res.ok) {
-    throw new Error(body.error || 'Terjadi kesalahan. Coba lagi.');
-  }
-
-  return body;
-}
 
 function pinDigits(value: string): string[] {
   return Array.from({ length: PIN_LENGTH }, (_, i) => value[i] ?? '');
@@ -47,12 +37,16 @@ function PinInput({
   disabled,
   hasError,
   onComplete,
+  pinAriaLabel,
+  pinDigitAria,
 }: {
   value: string;
   onChange: (pin: string) => void;
   disabled?: boolean;
   hasError?: boolean;
   onComplete?: () => void;
+  pinAriaLabel: string;
+  pinDigitAria: (n: number, total: number) => string;
 }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const digits = pinDigits(value);
@@ -123,7 +117,7 @@ function PinInput({
         hasError && 'outline outline-1 outline-[var(--color-hazard)]',
       )}
       role="group"
-      aria-label="Masukkan PIN 6 digit"
+      aria-label={pinAriaLabel}
     >
       {digits.map((digit, i) => (
         <div key={i} className="relative bg-[var(--color-field-border)]">
@@ -138,7 +132,7 @@ function PinInput({
             maxLength={1}
             value={digit}
             disabled={disabled}
-            aria-label={`Digit ${i + 1} dari ${PIN_LENGTH}`}
+            aria-label={pinDigitAria(i + 1, PIN_LENGTH)}
             onChange={(e) => handleChange(i, e)}
             onKeyDown={(e) => handleKeyDown(i, e)}
             onPaste={i === 0 ? handlePaste : undefined}
@@ -167,6 +161,32 @@ function PinInput({
 
 export default function PlayerLoginPage() {
   const router = useRouter();
+  const { t } = useTranslations();
+  const playerLoginSchema = useMemo(
+    () => createPlayerLoginSchema(t.validation.auth),
+    [t.validation.auth],
+  );
+  const pinDigitAria = useCallback(
+    (n: number, total: number) =>
+      t.auth.player.pinDigitAria.replace('{current}', String(n)).replace('{total}', String(total)),
+    [t.auth.player.pinDigitAria],
+  );
+  async function handlePlayerLogin(data: PlayerLoginInput) {
+    const res = await fetch('/api/auth/player', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    const body = await res.json();
+
+    if (!res.ok) {
+      throw new Error(body.error || t.common.genericError);
+    }
+
+    return body;
+  }
+
   const [pin, setPin] = useState('');
   const [serverError, setServerError] = useState<string | null>(null);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
@@ -212,7 +232,7 @@ export default function PlayerLoginPage() {
         router.refresh();
         router.push(result.redirect ?? '/card');
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Terjadi kesalahan. Coba lagi.';
+        const msg = err instanceof Error ? err.message : t.common.genericError;
         setServerError(msg);
 
         const lockMatch = msg.match(/terkunci.*?(\d+)\s*menit/i);
@@ -244,48 +264,46 @@ export default function PlayerLoginPage() {
           +
         </span>
 
-        <header>
-          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-hazard)]">
-            [ AUTH / PLAYER ]
-          </p>
-          <h1 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(2.75rem,11vw,6.5rem)] font-black uppercase leading-[0.88] tracking-[-0.05em] text-[var(--color-phosphor)]">
-            Kartu
-            <br />
-            pemain
-          </h1>
-          <p className="mt-5 max-w-[34ch] font-[family-name:var(--font-ui)] text-sm leading-relaxed text-[var(--color-field-text-2)]">
-            Username dan PIN dari coach. Tanpa peringkat, tanpa data teman.
-          </p>
-        </header>
+        <AuthHeroPanel>
+          <header>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--color-hazard)]">
+              {t.auth.player.badge}
+            </p>
+            <AuthHeroTitle title={t.auth.player.title} />
+            <AuthQuoteRotator quotes={PLAYER_ATHLETE_QUOTES} />
+          </header>
+        </AuthHeroPanel>
 
         <dl className="mt-10 space-y-0 font-mono text-[10px] uppercase tracking-[0.1em] lg:mt-0">
           <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-[var(--color-field-border)] py-3">
-            <dt className="text-[var(--color-field-text-3)]">Unit</dt>
+            <dt className="text-[var(--color-field-text-3)]">{t.common.unit}</dt>
             <dd className="text-right text-[var(--color-phosphor)]">{UNIT_ID}</dd>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-[var(--color-field-border)] py-3">
-            <dt className="text-[var(--color-field-text-3)]">Build</dt>
+            <dt className="text-[var(--color-field-text-3)]">{t.common.build}</dt>
             <dd className="text-right text-[var(--color-phosphor)]">{REV}</dd>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-b border-[var(--color-field-border)] py-3">
-            <dt className="text-[var(--color-field-text-3)]">Status</dt>
+            <dt className="text-[var(--color-field-text-3)]">{t.common.status}</dt>
             <dd className="text-right text-[var(--color-phosphor)]">
               {isLocked ? (
-                <samp className="text-[var(--color-hazard)]">LOCKED</samp>
+                <samp className="text-[var(--color-hazard)]">{t.common.locked}</samp>
               ) : (
-                <samp>READY</samp>
+                <samp>{t.common.ready}</samp>
               )}
             </dd>
           </div>
         </dl>
       </section>
 
+      <AuthFormPanel>
       {/* ── Credential terminal ── */}
       <section className="flex flex-col">
-        <div className="border-b border-[var(--color-field-border)] px-6 py-4 sm:px-8">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--color-field-border)] px-6 py-4 sm:px-8">
           <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-field-text-3)]">
-            &gt;&gt;&gt; credentials / terminal
+            {t.auth.player.terminalLabel}
           </p>
+          <LanguageToggle />
         </div>
 
         <div className="flex flex-1 flex-col px-6 py-6 sm:px-8">
@@ -312,7 +330,7 @@ export default function PlayerLoginPage() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  placeholder="rizky"
+                  placeholder={t.auth.player.usernamePlaceholder}
                   disabled={isPending || isLocked}
                   {...register('username')}
                   className={cn(
@@ -335,7 +353,7 @@ export default function PlayerLoginPage() {
             <div className="bg-[var(--color-field-surface)] p-4">
               <div className="mb-2 flex items-baseline justify-between gap-3">
                 <label className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-field-text-3)]">
-                  Pin 6 digit
+                  {t.auth.player.pinLabel}
                 </label>
                 <data
                   value={pin.length}
@@ -349,6 +367,8 @@ export default function PlayerLoginPage() {
                 onChange={onPinChange}
                 disabled={isPending || isLocked}
                 hasError={!!errors.pin}
+                pinAriaLabel={t.auth.player.pinAriaLabel}
+                pinDigitAria={pinDigitAria}
                 onComplete={() => {
                   document.getElementById('player-submit')?.focus();
                 }}
@@ -397,10 +417,10 @@ export default function PlayerLoginPage() {
                 {isPending ? (
                   <>
                     <CircleNotch size={20} weight="bold" className="animate-spin" />
-                    Processing
+                    {t.common.processing}
                   </>
                 ) : (
-                  '>>> Masuk ke kartu'
+                  t.auth.player.submit
                 )}
               </button>
             </div>
@@ -413,17 +433,18 @@ export default function PlayerLoginPage() {
               href="/login"
               className="text-[var(--color-field-text-2)] underline decoration-[var(--color-field-border)] underline-offset-4 transition-colors hover:text-[var(--color-phosphor)] hover:decoration-[var(--color-hazard)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-phosphor)]"
             >
-              Masuk sebagai coach
+              {t.auth.player.switchToCoach}
             </Link>
           </p>
         </div>
 
         <footer className="mt-auto border-t border-[var(--color-field-border)] px-6 py-3 sm:px-8">
           <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--color-field-text-3)]">
-            Dynasty Basketball Academy · Karawang · © Ballin
+            {t.common.footer}
           </p>
         </footer>
       </section>
+      </AuthFormPanel>
     </main>
   );
 }

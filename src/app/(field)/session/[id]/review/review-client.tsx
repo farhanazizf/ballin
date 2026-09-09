@@ -11,6 +11,7 @@ import {
 } from '@/lib/field/review';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 type EditableRow = {
   made: string;
@@ -37,6 +38,8 @@ export function ReviewClient({
   sessionId: string;
   coachId: string;
 }) {
+  const { t } = useTranslations();
+  const r = t.field.review;
   const [sections, setSections] = useState<ReviewDrillSection[]>([]);
   const [drafts, setDrafts] = useState<Record<string, Record<string, EditableRow>>>({});
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,7 @@ export function ReviewClient({
       }
       setDrafts(nextDrafts);
     } catch {
-      setError('Gagal memuat data review. Buka ulang halaman ini.');
+      setError(r.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -122,10 +125,10 @@ export function ReviewClient({
     startTransition(async () => {
       const result = await saveReviewOverrides(overrides, coachId);
       if (result.errors.length > 0) {
-        setError(result.errors[0] ?? 'Gagal menyimpan review.');
+        setError(result.errors[0] ?? r.saveFailed);
         return;
       }
-      setSavedMessage('Tersimpan di HP. Akan dikirim saat online.');
+      setSavedMessage(t.common.savedLocallyWillSync);
       await refresh();
     });
   }
@@ -133,7 +136,7 @@ export function ReviewClient({
   if (loading) {
     return (
       <div className="p-4 font-mono text-sm text-[var(--color-field-text-3)] animate-pulse">
-        Memuat review...
+        {r.loading}
       </div>
     );
   }
@@ -146,14 +149,14 @@ export function ReviewClient({
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-field-text-3)] mb-3"
         >
           <ArrowLeft size={16} />
-          Kembali ke pos
+          {r.backToStations}
         </Link>
-        <p className="brut-label text-[var(--color-hazard)]">[ Field / Review ]</p>
+        <p className="brut-label text-[var(--color-hazard)]">{r.badge}</p>
         <h1 className="font-[family-name:var(--font-display)] text-xl text-[var(--color-field-text)] mt-2">
-          Review hasil drill
+          {r.title}
         </h1>
         <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-field-text-3)]">
-          Koreksi angka sebelum selesai — tidak perlu internet
+          {r.subtitle}
         </p>
         {(summary.needsConfirm > 0 || summary.conflicts > 0) && (
           <div className="mt-3 space-y-1">
@@ -211,17 +214,17 @@ export function ReviewClient({
                             <div className="mt-1 flex flex-wrap gap-2">
                               {player.needsConfirm && (
                                 <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[var(--color-gold)]">
-                                  perlu konfirmasi
+                                  {r.needsConfirmFlag}
                                 </span>
                               )}
                               {player.hasConflict && (
                                 <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[var(--color-hazard)]">
-                                  multi-coach
+                                  {r.multiCoachFlag}
                                 </span>
                               )}
                               {player.overridden && (
                                 <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-[var(--color-phosphor)]">
-                                  diedit manual
+                                  {r.manualEditFlag}
                                 </span>
                               )}
                             </div>
@@ -247,7 +250,7 @@ export function ReviewClient({
                         <div className="grid grid-cols-2 gap-2">
                           <label className="flex flex-col gap-1">
                             <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--color-field-text-3)]">
-                              Made
+                              {r.made}
                             </span>
                             <input
                               type="number"
@@ -266,7 +269,7 @@ export function ReviewClient({
                           </label>
                           <label className="flex flex-col gap-1">
                             <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--color-field-text-3)]">
-                              Attempts
+                              {r.attempts}
                             </span>
                             <input
                               type="number"
@@ -316,14 +319,14 @@ export function ReviewClient({
               Menyimpan...
             </>
           ) : (
-            'Simpan review'
+            r.saveReview
           )}
         </Button>
         <Link
           href={`/session/${sessionId}/rubric`}
           className="mt-2 block text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-phosphor)]"
         >
-          Lanjut ke rubrik →
+          {r.continueToRubric}
         </Link>
       </footer>
     </div>

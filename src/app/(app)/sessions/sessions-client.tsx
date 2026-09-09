@@ -18,10 +18,12 @@ import { sessionTypeLabel } from '@/lib/benchmark/battery';
 import {
   formatSessionTime,
   groupSessionsByDate,
-  sessionStatusLabel,
   type SessionListItem,
   type TeamOption,
 } from '@/lib/queries/sessions';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import { StaggerList, StaggerRow } from '@/components/motion/stagger-list';
+import type { Locale } from '@/lib/i18n/types';
 
 const fadeUp = {
   initial: { opacity: 0, y: 8 },
@@ -42,6 +44,18 @@ function statusBadgeClass(status: SessionListItem['status']) {
   return 'bg-[var(--color-report-bg)] text-[var(--color-report-text-2)] border border-[var(--color-report-border)]';
 }
 
+function sessionStatusLabel(status: SessionListItem['status'], labels: ReturnType<typeof useTranslations>['t']['sessions']['status']) {
+  return labels[status];
+}
+
+function formatDateGroupLabel(dateKey: string, locale: Locale): string {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  }).format(date);
+}
+
 export function SessionsClient({
   sessions,
   teams,
@@ -50,6 +64,8 @@ export function SessionsClient({
   teams: TeamOption[];
 }) {
   const router = useRouter();
+  const { locale, t } = useTranslations();
+  const s = t.sessions;
   const groups = useMemo(() => groupSessionsByDate(sessions), [sessions]);
   const [showForm, setShowForm] = useState(false);
   const [teamId, setTeamId] = useState(teams[0]?.id ?? '');
@@ -67,13 +83,13 @@ export function SessionsClient({
   const [cancelling, setCancelling] = useState(false);
 
   const DAY_OPTIONS = [
-    { value: 1, label: 'Sen' },
-    { value: 2, label: 'Sel' },
-    { value: 3, label: 'Rab' },
-    { value: 4, label: 'Kam' },
-    { value: 5, label: 'Jum' },
-    { value: 6, label: 'Sab' },
-    { value: 7, label: 'Min' },
+    { value: 1, label: s.days.mon },
+    { value: 2, label: s.days.tue },
+    { value: 3, label: s.days.wed },
+    { value: 4, label: s.days.thu },
+    { value: 5, label: s.days.fri },
+    { value: 6, label: s.days.sat },
+    { value: 7, label: s.days.sun },
   ] as const;
 
   function toggleDay(day: number) {
@@ -85,7 +101,7 @@ export function SessionsClient({
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!teamId || !date) {
-      setError('Pilih kelas dan tanggal terlebih dahulu.');
+      setError(s.selectTeamAndDate);
       return;
     }
 
@@ -94,7 +110,7 @@ export function SessionsClient({
 
     if (recurring) {
       if (daysOfWeek.length === 0) {
-        setError('Pilih minimal satu hari untuk jadwal berulang.');
+        setError(s.selectRecurringDays);
         setSubmitting(false);
         return;
       }
@@ -117,7 +133,7 @@ export function SessionsClient({
       setSubmitting(false);
 
       if (!res.ok) {
-        setError(body.error ?? 'Gagal membuat jadwal berulang.');
+        setError(body.error ?? s.recurringFailed);
         return;
       }
 
@@ -144,7 +160,7 @@ export function SessionsClient({
     setSubmitting(false);
 
     if (!res.ok) {
-      setError(body.error ?? 'Gagal membuat sesi. Coba lagi dalam beberapa saat.');
+      setError(body.error ?? s.createFailed);
       return;
     }
 
@@ -154,7 +170,7 @@ export function SessionsClient({
 
   async function handleCancel(sessionId: string) {
     if (!cancelReason.trim()) {
-      setError('Isi alasan pembatalan sesi.');
+      setError(s.cancelReasonRequired);
       return;
     }
     setCancelling(true);
@@ -168,7 +184,7 @@ export function SessionsClient({
     const body = (await res.json()) as { error?: string };
     setCancelling(false);
     if (!res.ok) {
-      setError(body.error ?? 'Gagal membatalkan sesi.');
+      setError(body.error ?? s.cancelFailed);
       return;
     }
     setCancelTarget(null);
@@ -180,14 +196,14 @@ export function SessionsClient({
     <div className="space-y-6">
       <header className="flex items-start justify-between gap-4 border-b-2 border-[var(--color-report-border)] pb-5">
         <div>
-          <p className="brut-label text-[var(--color-hazard)]">[ Schedule / Sessions ]</p>
+          <p className="brut-label text-[var(--color-hazard)]">{s.badge}</p>
           <h1 className="brut-heading mt-2 text-2xl md:text-3xl text-[var(--color-report-text)]">
-            Latihan
+            {s.title}
           </h1>
           <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-report-text-3)]">
             {sessions.length > 0
-              ? `${sessions.length} sesi tercatat`
-              : 'Kelola jadwal latihan tim'}
+              ? s.subtitleCount.replace('{count}', String(sessions.length))
+              : s.subtitleEmpty}
           </p>
         </div>
         <Button
@@ -197,7 +213,7 @@ export function SessionsClient({
           className="shrink-0"
         >
           <Plus size={16} weight="bold" />
-          Buat sesi
+          {s.createSession}
         </Button>
       </header>
 
@@ -219,7 +235,7 @@ export function SessionsClient({
             </p>
           ) : null}
           <label className="flex flex-col gap-2">
-            <span className="brut-label text-[var(--color-report-text-3)]">Tipe sesi</span>
+            <span className="brut-label text-[var(--color-report-text-3)]">{s.sessionType}</span>
             <select
               value={sessionType}
               onChange={(e) => setSessionType(e.target.value as 'training' | 'benchmark')}
@@ -231,7 +247,7 @@ export function SessionsClient({
           </label>
           <label className="flex flex-col gap-2">
             <span className="brut-label text-[var(--color-report-text-3)]">
-              Kelas
+              {s.team}
             </span>
             <select
               value={teamId}
@@ -248,7 +264,7 @@ export function SessionsClient({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col gap-2">
               <span className="brut-label text-[var(--color-report-text-3)]">
-                Tanggal
+                {s.date}
               </span>
               <input
                 type="date"
@@ -259,7 +275,7 @@ export function SessionsClient({
             </label>
             <label className="flex flex-col gap-2">
               <span className="brut-label text-[var(--color-report-text-3)]">
-                Waktu mulai
+                {s.startTime}
               </span>
               <input
                 type="time"
@@ -276,11 +292,11 @@ export function SessionsClient({
               onChange={(e) => setRecurring(e.target.checked)}
               className="h-4 w-4 accent-[var(--color-hazard)]"
             />
-            Jadwal berulang mingguan
+            {s.recurringWeekly}
           </label>
           {recurring ? (
             <div className="space-y-3 border border-[var(--color-report-border)] p-3">
-              <p className="brut-label text-[var(--color-report-text-3)]">Hari latihan</p>
+              <p className="brut-label text-[var(--color-report-text-3)]">{s.practiceDays}</p>
               <div className="flex flex-wrap gap-2">
                 {DAY_OPTIONS.map((day) => (
                   <button
@@ -300,7 +316,7 @@ export function SessionsClient({
               </div>
               <label className="flex flex-col gap-2">
                 <span className="brut-label text-[var(--color-report-text-3)]">
-                  Minggu ke depan
+                  {s.weeksAhead}
                 </span>
                 <input
                   type="number"
@@ -315,28 +331,28 @@ export function SessionsClient({
           ) : null}
           <label className="flex flex-col gap-2">
             <span className="brut-label text-[var(--color-report-text-3)]">
-              Lokasi
+              {s.location}
             </span>
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Contoh: GOR Dynasty"
+              placeholder={s.locationPlaceholder}
               className="h-12 w-full border-2 border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-4 font-mono text-sm text-[var(--color-report-text)] placeholder:text-[var(--color-report-text-3)] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-hazard)]"
             />
           </label>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" variant="report-primary" disabled={submitting}>
-              {submitting ? 'Menyimpan...' : recurring ? 'Buat jadwal berulang' : 'Simpan sesi'}
+              {submitting ? t.common.saving : recurring ? s.createRecurring : s.saveSession}
             </Button>
             <Button type="button" variant="report-ghost" onClick={() => setShowForm(false)}>
-              Batal
+              {t.common.cancel}
             </Button>
             <Link
               href="/sessions/new"
               className="text-sm text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)] self-center hover:text-[var(--color-report-text-2)]"
             >
-              Form lengkap
+              {s.fullForm}
             </Link>
           </div>
         </motion.form>
@@ -345,8 +361,8 @@ export function SessionsClient({
       {sessions.length === 0 ? (
         <EmptyState
           icon={<CalendarBlank size={28} weight="duotone" />}
-          title="Belum ada sesi latihan"
-          description="Buat sesi pertama untuk mulai mencatat absensi dan drill di lapangan."
+          title={s.emptyTitle}
+          description="{s.createSession} pertama untuk mulai mencatat absensi dan drill di lapangan."
           theme="report"
         />
       ) : (
@@ -358,9 +374,9 @@ export function SessionsClient({
               transition={{ ...fadeUp.transition, delay: groupIndex * 0.05 }}
             >
               <h2 className="brut-label text-[var(--color-report-text-3)] mb-3">
-                {group.dateLabel}
+                {formatDateGroupLabel(group.dateKey, locale)}
               </h2>
-              <ul className="divide-y divide-[var(--color-report-border)] border-2 border-[var(--color-report-border)] bg-[var(--color-report-surface)] overflow-hidden">
+              <StaggerList className="divide-y divide-[var(--color-report-border)] border-2 border-[var(--color-report-border)] bg-[var(--color-report-surface)] overflow-hidden">
                 {group.sessions.map((session) => {
                   const isActive = session.status === 'active';
                   const rowContent = (
@@ -387,7 +403,7 @@ export function SessionsClient({
                               statusBadgeClass(session.status),
                             )}
                           >
-                            {sessionStatusLabel(session.status)}
+                            {sessionStatusLabel(session.status, s.status)}
                           </span>
                         </div>
                         <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-0.5 tabular-nums">
@@ -419,7 +435,7 @@ export function SessionsClient({
 
                   if (isActive) {
                     return (
-                      <li key={session.id}>
+                      <StaggerRow key={session.id}>
                         <Link
                           href={`/session/${session.id}/attendance`}
                           className={cn(
@@ -430,14 +446,14 @@ export function SessionsClient({
                         >
                           {rowContent}
                         </Link>
-                      </li>
+                      </StaggerRow>
                     );
                   }
 
                   const canCancel = session.status === 'scheduled';
 
                   return (
-                    <li key={session.id} className="px-4 py-4">
+                    <StaggerRow key={session.id} className="px-4 py-4">
                       <div className="flex items-center gap-3">{rowContent}</div>
                       {canCancel && (
                         <div className="mt-3 pl-[3.25rem]">
@@ -447,7 +463,7 @@ export function SessionsClient({
                                 type="text"
                                 value={cancelReason}
                                 onChange={(e) => setCancelReason(e.target.value)}
-                                placeholder="Alasan pembatalan"
+                                placeholder={s.cancelReasonPlaceholder}
                                 className="h-10 w-full border border-[var(--color-report-border)] bg-[var(--color-report-bg)] px-3 font-mono text-xs"
                               />
                               <div className="flex gap-2">
@@ -458,7 +474,7 @@ export function SessionsClient({
                                   disabled={cancelling}
                                   onClick={() => void handleCancel(session.id)}
                                 >
-                                  Batalkan sesi
+                                  {t.common.cancel}kan sesi
                                 </Button>
                                 <Button
                                   type="button"
@@ -469,7 +485,7 @@ export function SessionsClient({
                                     setCancelReason('');
                                   }}
                                 >
-                                  Batal
+                                  {t.common.cancel}
                                 </Button>
                               </div>
                             </div>
@@ -479,15 +495,15 @@ export function SessionsClient({
                               onClick={() => setCancelTarget(session.id)}
                               className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-report-text-3)] hover:text-[var(--color-hazard)]"
                             >
-                              Batalkan sesi ini
+                              {t.common.cancel}kan sesi ini
                             </button>
                           )}
                         </div>
                       )}
-                    </li>
+                    </StaggerRow>
                   );
                 })}
-              </ul>
+              </StaggerList>
             </motion.section>
           ))}
         </div>

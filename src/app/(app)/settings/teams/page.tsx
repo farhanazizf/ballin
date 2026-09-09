@@ -2,9 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { UsersThree } from '@phosphor-icons/react/dist/ssr';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/ui/empty-state';
+import { getServerMessages } from '@/lib/i18n/server';
 import { TeamsSettingsClient, type TeamRow } from './teams-settings-client';
 
 export default async function TeamsSettingsPage() {
+  const t = await getServerMessages();
   const supabase = (await createServerSupabaseClient()) as SupabaseClient;
   const {
     data: { user },
@@ -15,8 +17,8 @@ export default async function TeamsSettingsPage() {
       <Shell>
         <EmptyState
           icon={<UsersThree size={28} weight="duotone" />}
-          title="Sesi belum aktif"
-          description="Masuk ulang untuk melihat kelas."
+          title={t.common.sessionInactive}
+          description={t.settings.teams.inactiveDesc}
           theme="report"
         />
       </Shell>
@@ -34,8 +36,8 @@ export default async function TeamsSettingsPage() {
       <Shell>
         <EmptyState
           icon={<UsersThree size={28} weight="duotone" />}
-          title="Profil belum lengkap"
-          description="Hubungi admin Dynasty."
+          title={t.common.profileIncomplete}
+          description={t.settings.teams.profileIncompleteDesc}
           theme="report"
         />
       </Shell>
@@ -59,9 +61,9 @@ export default async function TeamsSettingsPage() {
 
   return (
     <Shell>
-      <p className="brut-label text-[var(--color-hazard)]">[ Settings / Teams ]</p>
+      <p className="brut-label text-[var(--color-hazard)]">{t.settings.teams.badge}</p>
       <h1 className="brut-heading mt-2 text-2xl text-[var(--color-report-text)] mb-6">
-        Kelas
+        {t.settings.teams.title}
       </h1>
       <TeamsSettingsClient
         teams={rows}

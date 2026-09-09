@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { CircleNotch, PencilSimple, Plus } from '@phosphor-icons/react';
-import { teamSchema, type TeamInput } from '@/lib/validators/team';
+import { createTeamSchema, type TeamInput } from '@/lib/validators/team';
+import { useTranslations } from '@/lib/i18n/use-translations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,8 @@ function parseForm(values: FormValues): TeamInput {
 }
 
 function TeamForm({
+  messages,
+
   initial,
   submitLabel,
   onCancel,
@@ -67,7 +70,10 @@ function TeamForm({
   submitLabel: string;
   onCancel?: () => void;
   onSubmit: (payload: TeamInput) => Promise<void>;
+  messages: ReturnType<typeof useTranslations>['t'];
 }) {
+  const st = messages.settings.teams;
+  const teamSchema = useMemo(() => createTeamSchema(messages.validation.team), [messages.validation.team]);
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -77,14 +83,14 @@ function TeamForm({
     setError(null);
     const parsed = teamSchema.safeParse(parseForm(values));
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Data kelas tidak valid.');
+      setError(parsed.error.issues[0]?.message ?? messages.validation.team.invalidData);
       return;
     }
     startTransition(async () => {
       try {
         await onSubmit(parsed.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Gagal menyimpan kelas.');
+        setError(err instanceof Error ? err.message : st.saveFailed);
       }
     });
   }
@@ -93,7 +99,7 @@ function TeamForm({
     <form onSubmit={handleSubmit} className="space-y-4 border-2 border-[var(--color-report-border)] bg-[var(--color-report-surface)] p-4">
       <Input
         theme="report"
-        label="Nama kelas"
+        label={st.teamName}
         value={values.name}
         onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
         required
@@ -101,17 +107,17 @@ function TeamForm({
       <div className="grid grid-cols-2 gap-3">
         <Input
           theme="report"
-          label="Usia min"
+          label={st.ageMin}
           type="number"
           min={0}
           max={99}
           value={values.ageMin}
           onChange={(e) => setValues((v) => ({ ...v, ageMin: e.target.value }))}
-          hint="Kosongkan jika tidak dipakai"
+          hint={st.ageMinHint}
         />
         <Input
           theme="report"
-          label="Usia maks"
+          label={st.ageMax}
           type="number"
           min={0}
           max={99}
@@ -126,7 +132,7 @@ function TeamForm({
           onChange={(e) => setValues((v) => ({ ...v, trackDrillStats: e.target.checked }))}
           className="h-4 w-4 accent-[var(--color-hazard)]"
         />
-        Catat statistik drill
+        {st.trackDrillStats}
       </label>
       <label className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--color-report-text-2)]">
         <input
@@ -135,7 +141,7 @@ function TeamForm({
           onChange={(e) => setValues((v) => ({ ...v, isActive: e.target.checked }))}
           className="h-4 w-4 accent-[var(--color-hazard)]"
         />
-        Kelas aktif
+        {st.teamActive}
       </label>
       {error && (
         <p className="font-mono text-[11px] text-[var(--color-hazard)]">{error}</p>
@@ -146,7 +152,7 @@ function TeamForm({
         </Button>
         {onCancel && (
           <Button type="button" variant="report-secondary" onClick={onCancel} disabled={isPending}>
-            Batal
+            {messages.common.cancel}
           </Button>
         )}
       </div>
@@ -162,6 +168,7 @@ export function TeamsSettingsClient({
   canManage: boolean;
 }) {
   const router = useRouter();
+  const { t } = useTranslations();
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -173,7 +180,7 @@ export function TeamsSettingsClient({
     });
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
-      throw new Error(data.error ?? 'Gagal menyimpan kelas.');
+      throw new Error(data.error ?? t.settings.teams.saveFailed);
     }
     setShowCreate(false);
     router.refresh();
@@ -187,7 +194,7 @@ export function TeamsSettingsClient({
     });
     const data = (await response.json()) as { error?: string };
     if (!response.ok) {
-      throw new Error(data.error ?? 'Gagal memperbarui kelas.');
+      throw new Error(data.error ?? t.settings.teams.updateFailed);
     }
     setEditingId(null);
     router.refresh();
@@ -207,14 +214,15 @@ export function TeamsSettingsClient({
               }}
             >
               <Plus size={16} weight="bold" />
-              Tambah kelas
+              {t.settings.teams.addTeam}
             </Button>
           ) : (
             <TeamForm
               initial={emptyForm()}
-              submitLabel="Simpan kelas"
+              submitLabel={t.settings.teams.saveTeam}
               onCancel={() => setShowCreate(false)}
               onSubmit={createTeam}
+              messages={t}
             />
           )}
         </div>
@@ -222,7 +230,7 @@ export function TeamsSettingsClient({
 
       {!canManage && (
         <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--color-report-text-3)]">
-          Hanya admin yang dapat mengubah kelas. Hubungi admin Dynasty jika perlu perubahan.
+          {t.settings.teams.adminOnly}
         </p>
       )}
 
@@ -233,9 +241,10 @@ export function TeamsSettingsClient({
               <div className="p-4">
                 <TeamForm
                   initial={teamToForm(team)}
-                  submitLabel="Simpan perubahan"
+                  submitLabel={t.settings.teams.saveChanges}
                   onCancel={() => setEditingId(null)}
                   onSubmit={(payload) => updateTeam(team.id, payload)}
+                  messages={t}
                 />
               </div>
             ) : (
@@ -246,11 +255,11 @@ export function TeamsSettingsClient({
                   </p>
                   <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-report-text-3)]">
                     {team.ageMin != null && team.ageMax != null
-                      ? `Usia ${team.ageMin}–${team.ageMax}`
-                      : 'Semua usia'}
+                      ? t.settings.teams.ageRange.replace('{min}', String(team.ageMin)).replace('{max}', String(team.ageMax))
+                      : t.settings.teams.allAges}
                     {' · '}
-                    {team.trackDrillStats ? 'Drill stats' : 'Absensi saja'}
-                    {!team.isActive ? ' · Nonaktif' : ''}
+                    {team.trackDrillStats ? t.settings.teams.drillStats : t.settings.teams.attendanceOnly}
+                    {!team.isActive ? ` · ${t.common.inactive}` : ''}
                   </p>
                 </div>
                 {canManage && (
@@ -264,7 +273,7 @@ export function TeamsSettingsClient({
                       'shrink-0 border border-[var(--color-report-border)] p-2',
                       'text-[var(--color-report-text-2)] hover:border-[var(--color-hazard)] hover:text-[var(--color-hazard)]',
                     )}
-                    aria-label={`Edit ${team.name}`}
+                    aria-label={t.settings.teams.editAria.replace('{name}', team.name)}
                   >
                     <PencilSimple size={16} />
                   </button>

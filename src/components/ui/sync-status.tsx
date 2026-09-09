@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { CloudArrowUp, CheckCircle, WifiSlash } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/use-translations';
 
 type SyncState = 'local' | 'syncing' | 'synced';
 
@@ -13,6 +14,7 @@ interface SyncStatusProps {
 }
 
 export function SyncStatus({ state = 'local', pendingCount = 0, className }: SyncStatusProps) {
+  const { t } = useTranslations();
   const [showSynced, setShowSynced] = useState(false);
 
   useEffect(() => {
@@ -41,19 +43,19 @@ export function SyncStatus({ state = 'local', pendingCount = 0, className }: Syn
       {state === 'local' && (
         <>
           <WifiSlash size={14} weight="bold" />
-          <span>Tersimpan di HP{pendingCount > 0 ? ` (${pendingCount})` : ''}</span>
+          <span>{t.common.sync.local}{pendingCount > 0 ? ` (${pendingCount})` : ''}</span>
         </>
       )}
       {state === 'syncing' && (
         <>
           <CloudArrowUp size={14} weight="bold" className="animate-pulse" />
-          <span>Mengirim...</span>
+          <span>{t.common.sync.syncing}</span>
         </>
       )}
       {state === 'synced' && showSynced && (
         <>
           <CheckCircle size={14} weight="bold" />
-          <span>Terkirim</span>
+          <span>{t.common.sync.synced}</span>
         </>
       )}
     </div>

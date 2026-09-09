@@ -6,6 +6,9 @@ import { recordRep, undoLastRep } from '@/lib/sync/record-rep';
 import { db } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { StatNumber } from '@/components/ui/stat-number';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import { motion, useReducedMotion } from 'framer-motion';
+import { fadeUpItem, staggerContainer, tapTransition } from '@/lib/motion/presets';
 
 export type DrillGridPlayer = {
   id: string;
@@ -46,12 +49,19 @@ const PlayerCard = memo(function PlayerCard({
   onMade,
   onMiss,
   onDnp,
+  labels,
 }: {
   player: DrillGridPlayer;
   counts: PlayerCounts;
   onMade: () => void;
   onMiss: () => void;
   onDnp: () => void;
+  labels: {
+    dnp: string;
+    made: string;
+    miss: string;
+    dnpButton: string;
+  };
 }) {
   return (
     <div
@@ -72,7 +82,7 @@ const PlayerCard = memo(function PlayerCard({
         )}
       </div>
       {counts.dnp ? (
-        <p className="text-xs text-[var(--color-field-text-3)] font-[family-name:var(--font-ui)]">Tidak ikut</p>
+        <p className="text-xs text-[var(--color-field-text-3)] font-[family-name:var(--font-ui)]">{labels.dnp}</p>
       ) : (
         <div data-testid={`drill-count-${player.id}`}>
           <StatNumber
@@ -85,17 +95,19 @@ const PlayerCard = memo(function PlayerCard({
       )}
       {!counts.dnp && (
         <div className="grid grid-cols-3 gap-1.5">
-          <button
+          <motion.button
             type="button"
             data-testid={`drill-made-${player.id}`}
             onClick={onMade}
+            whileTap={{ scale: 0.96 }}
+            transition={tapTransition}
             className={cn(
               'h-10 rounded-none text-sm font-semibold font-[family-name:var(--font-ui)]',
-              'bg-[var(--color-made)]/20 text-[var(--color-made)] active:scale-[0.97]',
+              'bg-[var(--color-made)]/20 text-[var(--color-made)]',
             )}
           >
-            Made
-          </button>
+            {labels.made}
+          </motion.button>
           <button
             type="button"
             onClick={onMiss}
@@ -104,7 +116,7 @@ const PlayerCard = memo(function PlayerCard({
               'bg-[var(--color-miss)]/15 text-[var(--color-miss)] active:scale-[0.97]',
             )}
           >
-            Miss
+            {labels.miss}
           </button>
           <button
             type="button"
@@ -114,13 +126,73 @@ const PlayerCard = memo(function PlayerCard({
               'bg-[var(--color-field-raised)] text-[var(--color-field-text-3)] active:scale-[0.97]',
             )}
           >
-            DNP
+            {labels.dnpButton}
           </button>
         </div>
       )}
     </div>
   );
 });
+
+
+function DrillGridList({
+  players,
+  counts,
+  labels,
+  onTap,
+}: {
+  players: DrillGridPlayer[];
+  counts: Record<string, PlayerCounts>;
+  labels: {
+    dnp: string;
+    made: string;
+    miss: string;
+    dnpButton: string;
+  };
+  onTap: (playerId: string, result: 'made' | 'miss' | 'dnp') => void;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  if (reduceMotion) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {players.map((player) => (
+          <PlayerCard
+            key={player.id}
+            player={player}
+            counts={counts[player.id] ?? { made: 0, attempts: 0, dnp: false }}
+            labels={labels}
+            onMade={() => onTap(player.id, 'made')}
+            onMiss={() => onTap(player.id, 'miss')}
+            onDnp={() => onTap(player.id, 'dnp')}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+    >
+      {players.map((player) => (
+        <motion.div key={player.id} variants={fadeUpItem}>
+          <PlayerCard
+            player={player}
+            counts={counts[player.id] ?? { made: 0, attempts: 0, dnp: false }}
+            labels={labels}
+            onMade={() => onTap(player.id, 'made')}
+            onMiss={() => onTap(player.id, 'miss')}
+            onDnp={() => onTap(player.id, 'dnp')}
+          />
+        </motion.div>
+      ))}
+    </motion.div>
+  );
+}
 
 export function DrillGrid({
   sessionDrillId,
@@ -135,6 +207,7 @@ export function DrillGrid({
   drillName: string;
   target?: number;
 }) {
+  const { t } = useTranslations();
   const playerIds = players.map((p) => p.id);
   const { counts, refresh } = usePlayerCounts(sessionDrillId, playerIds);
   const [lastPlayerId, setLastPlayerId] = useState<string | null>(null);
@@ -151,6 +224,8 @@ export function DrillGrid({
     await refresh();
   }
 
+  const labels = t.field.drillGrid;
+
   return (
     <div className="space-y-4">
       <header className="flex items-end justify-between gap-3">
@@ -160,27 +235,16 @@ export function DrillGrid({
           </h1>
           {target != null && (
             <p className="text-sm text-[var(--color-field-text-3)] font-[family-name:var(--font-ui)]">
-              Target {target} reps
+              {labels.targetReps.replace('{target}', String(target))}
             </p>
           )}
         </div>
         <Button variant="secondary" size="sm" data-testid="drill-undo" onClick={handleUndo} disabled={!lastPlayerId}>
-          Undo
+          {labels.undo}
         </Button>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {players.map((player) => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            counts={counts[player.id] ?? { made: 0, attempts: 0, dnp: false }}
-            onMade={() => void tap(player.id, 'made')}
-            onMiss={() => void tap(player.id, 'miss')}
-            onDnp={() => void tap(player.id, 'dnp')}
-          />
-        ))}
-      </div>
+      <DrillGridList players={players} counts={counts} labels={labels} onTap={tap} />
     </div>
   );
 }

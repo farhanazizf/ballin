@@ -9,9 +9,11 @@ import {
   getWeeklyAttendance,
 } from '@/lib/queries/dashboard';
 import { EmptyState } from '@/components/ui/empty-state';
+import { getServerMessages } from '@/lib/i18n/server';
 import { DashboardClient } from './dashboard-client';
 
 export default async function DashboardPage() {
+  const t = await getServerMessages();
   const supabase = (await createServerSupabaseClient()) as SupabaseClient;
   const {
     data: { user },
@@ -20,8 +22,8 @@ export default async function DashboardPage() {
   if (!user) {
     return (
       <ProfileError
-        title="Sesi belum aktif"
-        description="Masuk ulang dengan akun coach untuk melihat dashboard."
+        title={t.common.sessionInactive}
+        description={t.dashboard.page.sessionInactiveDesc}
       />
     );
   }
@@ -35,8 +37,8 @@ export default async function DashboardPage() {
   if (!profile?.organization_id) {
     return (
       <ProfileError
-        title="Profil belum lengkap"
-        description="Akun Anda belum terhubung ke organisasi. Hubungi admin Dynasty untuk aktivasi."
+        title={t.common.profileIncomplete}
+        description={t.dashboard.page.profileIncompleteDesc}
       />
     );
   }
@@ -50,15 +52,15 @@ export default async function DashboardPage() {
   if (!organization) {
     return (
       <ProfileError
-        title="Organisasi tidak ditemukan"
-        description="Data akademi tidak tersedia. Periksa koneksi atau hubungi admin jika masalah berlanjut."
+        title={t.dashboard.page.orgNotFoundTitle}
+        description={t.dashboard.page.orgNotFoundDesc}
       />
     );
   }
 
   const teamIds = await getCoachTeamIds(supabase, user.id);
 
-  let teamName = 'Semua kelas';
+  let teamName = t.dashboard.page.allTeams;
   if (teamIds.length > 0) {
     const { data: teams } = await supabase
       .from('teams')

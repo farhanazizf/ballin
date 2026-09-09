@@ -38,6 +38,8 @@ import {
   readDismissedAlertIds,
   type DashboardAlert,
 } from '@/lib/queries/dashboard-alerts';
+import { useTranslations } from '@/lib/i18n/use-translations';
+import type { Locale } from '@/lib/i18n/types';
 
 export type DashboardClientProps = {
   orgName: string;
@@ -48,8 +50,8 @@ export type DashboardClientProps = {
   drillDistribution: DrillDistributionItem[];
 };
 
-function formatIndonesianDate(date: Date): string {
-  return new Intl.DateTimeFormat('id-ID', {
+function formatLocaleDate(date: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'id-ID', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -57,19 +59,14 @@ function formatIndonesianDate(date: Date): string {
   }).format(date);
 }
 
-function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat('id-ID', {
+function formatTime(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'id-ID', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   }).format(new Date(iso));
 }
 
-function sessionStatusLabel(status: UpcomingSession['status']): string {
-  if (status === 'active') return 'Sedang berlangsung';
-  if (status === 'scheduled') return 'Belum dimulai';
-  return 'Selesai';
-}
 
 const cardClass = cn(
   'bg-[var(--color-report-surface)]',
@@ -118,9 +115,13 @@ function getLowCategories(items: DrillDistributionItem[]): Set<string> {
 function DashboardAlertsBanner({
   attendance,
   attentionPlayers,
+  alertMessages,
+  dismissLabel,
 }: {
   attendance: WeeklyAttendance;
   attentionPlayers: AttentionPlayer[];
+  alertMessages: import('@/lib/i18n/messages/dashboard').DashboardMessages['alerts'];
+  dismissLabel: string;
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
@@ -130,10 +131,10 @@ function DashboardAlertsBanner({
 
   const alerts = useMemo(
     () =>
-      buildDashboardAlerts(attendance, attentionPlayers).filter(
+      buildDashboardAlerts(attendance, attentionPlayers, alertMessages).filter(
         (alert) => !dismissed.has(alert.id),
       ),
-    [attendance, attentionPlayers, dismissed],
+    [attendance, attentionPlayers, alertMessages, dismissed],
   );
 
   if (alerts.length === 0) return null;
@@ -146,7 +147,7 @@ function DashboardAlertsBanner({
   return (
     <div className="mb-6 space-y-2">
       {alerts.map((alert) => (
-        <AlertBannerRow key={alert.id} alert={alert} onDismiss={() => handleDismiss(alert.id)} />
+        <AlertBannerRow key={alert.id} alert={alert} onDismiss={() => handleDismiss(alert.id)} dismissLabel={dismissLabel} />
       ))}
     </div>
   );
@@ -155,9 +156,11 @@ function DashboardAlertsBanner({
 function AlertBannerRow({
   alert,
   onDismiss,
+  dismissLabel,
 }: {
   alert: DashboardAlert;
   onDismiss: () => void;
+  dismissLabel: string;
 }) {
   const content = (
     <>
@@ -199,7 +202,7 @@ function AlertBannerRow({
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Tutup peringatan"
+        aria-label={dismissLabel}
         className={cn(
           'shrink-0 p-1 rounded-[var(--radius-chip)]',
           'text-[var(--color-report-text-3)] hover:text-[var(--color-report-text)]',
@@ -220,8 +223,10 @@ export function DashboardClient({
   attentionPlayers,
   drillDistribution,
 }: DashboardClientProps) {
+  const { locale, t } = useTranslations();
+  const d = t.dashboard;
   const today = useMemo(() => new Date(), []);
-  const todayFormatted = useMemo(() => formatIndonesianDate(today), [today]);
+  const todayFormatted = useMemo(() => formatLocaleDate(today, locale), [today, locale]);
   const lowCategories = useMemo(
     () => getLowCategories(drillDistribution),
     [drillDistribution],
@@ -241,7 +246,7 @@ export function DashboardClient({
         </p>
       </header>
 
-      <DashboardAlertsBanner attendance={attendance} attentionPlayers={attentionPlayers} />
+      <DashboardAlertsBanner attendance={attendance} attentionPlayers={attentionPlayers} alertMessages={d.alerts} dismissLabel={t.common.dismissAlert} />
 
       <div
         className={cn(
@@ -260,13 +265,13 @@ export function DashboardClient({
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold text-[var(--color-report-text)] font-[family-name:var(--font-display)]">
-                    Latihan hari ini
+                    {d.todaySession}
                   </h2>
                   <p className="text-sm text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mt-0.5">
-                    {formatIndonesianDate(new Date(upcomingSession.scheduledStart))} ·{' '}
-                    {formatTime(upcomingSession.scheduledStart)}
+                    {formatLocaleDate(new Date(upcomingSession.scheduledStart), locale)} ·{' '}
+                    {formatTime(upcomingSession.scheduledStart, locale)}
                     {upcomingSession.scheduledEnd
-                      ? ` – ${formatTime(upcomingSession.scheduledEnd)}`
+                      ? ` – ${formatTime(upcomingSession.scheduledEnd, locale)}`
                       : ''}
                   </p>
                 </div>
@@ -290,7 +295,7 @@ export function DashboardClient({
                     'border border-[var(--color-report-border)]',
                   )}
                 >
-                  {sessionStatusLabel(upcomingSession.status)}
+                  {d.sessionStatus[upcomingSession.status]}
                 </span>
                 <span
                   className={cn(
@@ -318,14 +323,14 @@ export function DashboardClient({
                 )}
               >
                 <Barbell size={18} weight="bold" />
-                {upcomingSession.status === 'active' ? 'Lanjut latihan' : 'Mulai latihan'}
+                {upcomingSession.status === 'active' ? d.continueSession : d.startSession}
               </Link>
             </>
           ) : (
             <EmptyState
               icon={<CalendarBlank size={28} weight="duotone" />}
-              title="Belum ada latihan terjadwal"
-              description="Buat jadwal latihan baru agar tim bisa mulai mencatat absensi dan drill."
+              title={d.noUpcomingTitle}
+              description={d.noUpcomingDesc}
               theme="report"
               className="py-10"
             />
@@ -338,7 +343,7 @@ export function DashboardClient({
           className={cn(cardClass, 'md:col-span-1 flex flex-col')}
         >
           <h2 className="text-sm font-semibold text-[var(--color-report-text-2)] font-[family-name:var(--font-ui)] mb-3">
-            Absen minggu ini
+            {d.weeklyAttendance}
           </h2>
 
           {attendance.total > 0 ? (
@@ -368,11 +373,11 @@ export function DashboardClient({
                     ) : (
                       <ArrowDown size={12} weight="bold" />
                     )}
-                    {Math.abs(attendance.trend)}% dari minggu lalu
+                    {d.trendFromLastWeek.replace('{pct}', String(Math.abs(attendance.trend)))}
                   </span>
                 ) : (
                   <span className="text-xs text-[var(--color-report-text-3)] font-[family-name:var(--font-ui)]">
-                    Sama dengan minggu lalu
+                    {d.sameAsLastWeek}
                   </span>
                 )}
               </div>
@@ -393,8 +398,8 @@ export function DashboardClient({
           ) : (
             <EmptyState
               icon={<ChartBar size={28} weight="duotone" />}
-              title="Belum ada data absensi"
-              description="Data absensi minggu ini akan muncul setelah latihan pertama dicatat."
+              title={d.noAttendanceTitle}
+              description={d.noAttendanceDesc}
               theme="report"
               className="py-8"
             />
@@ -409,7 +414,7 @@ export function DashboardClient({
           <div className="flex items-center gap-2 mb-4">
             <WarningCircle size={18} weight="duotone" className="text-[var(--color-gold)]" />
             <h2 className="text-sm font-semibold text-[var(--color-report-text)] font-[family-name:var(--font-ui)]">
-              Perlu perhatian
+              {d.attentionTitle}
             </h2>
           </div>
 
@@ -441,8 +446,8 @@ export function DashboardClient({
           ) : (
             <EmptyState
               icon={<WarningCircle size={28} weight="duotone" />}
-              title="Semua pemain terpantau baik"
-              description="Belum ada pemain dengan absen berulang atau kehadiran rendah minggu ini."
+              title={d.allGoodTitle}
+              description={d.allGoodDesc}
               theme="report"
               className="py-8"
             />
@@ -455,7 +460,7 @@ export function DashboardClient({
           className={cn(cardClass, 'md:col-span-1 md:row-start-2')}
         >
           <h2 className="text-sm font-semibold text-[var(--color-report-text)] font-[family-name:var(--font-ui)] mb-4">
-            Distribusi drill bulan ini
+            {d.drillDistribution}
           </h2>
 
           {drillDistribution.length > 0 ? (
@@ -531,8 +536,8 @@ export function DashboardClient({
           ) : (
             <EmptyState
               icon={<Barbell size={28} weight="duotone" />}
-              title="Belum ada drill tercatat"
-              description="Distribusi kategori drill akan muncul setelah sesi latihan dijalankan bulan ini."
+              title={d.noDrillsTitle}
+              description={d.noDrillsDesc}
               theme="report"
               className="py-8"
             />
