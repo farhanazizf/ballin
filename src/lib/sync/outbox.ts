@@ -1,4 +1,5 @@
 import { db, type OutboxItem } from '@/lib/db';
+import { groupOutboxItems, hasSyncableOutboxItems } from '@/lib/sync/outbox-group';
 
 const BATCH_SIZE = 50;
 const MAX_RETRIES = 10;
@@ -69,77 +70,81 @@ export function getBackoffMs(retries: number): number {
 }
 
 async function sendBatch(items: OutboxItem[]): Promise<{ ok: boolean; status: number }> {
-  const drillEvents = items
-    .filter((item) => item.table === 'drill_events')
-    .map((item) => item.payload as {
-      clientEventId: string;
-      sessionDrillId: string;
-      playerId: string;
-      result: 'made' | 'miss' | 'dnp';
-      value?: number;
-      occurredAt: string;
-      deviceId: string;
-      recordedBy: string;
-    });
+  const groups = groupOutboxItems(items);
 
-  const attendanceRecords = items
-    .filter((item) => item.table === 'attendance')
-    .map((item) => item.payload as {
-      sessionId: string;
-      playerId: string;
-      sessionDate: string;
-      status: 'present' | 'late' | 'excused' | 'sick' | 'absent';
-      method: 'qr' | 'manual' | 'auto' | 'kiosk';
-      checkedInAt: string;
-      recordedBy: string;
-    });
-
-  const drillResults = items
-    .filter((item) => item.table === 'drill_results')
-    .map((item) => item.payload as {
-      sessionDrillId: string;
-      playerId: string;
-      made: number;
-      attempts: number;
-      isDnp: boolean;
-    });
-
-  if (drillEvents.length === 0 && attendanceRecords.length === 0 && drillResults.length === 0) {
+  if (!hasSyncableOutboxItems(groups)) {
     return { ok: true, status: 200 };
   }
 
   const requests: Promise<Response>[] = [];
 
-  if (drillEvents.length > 0) {
+  if (groups.drillEvents.length > 0) {
     requests.push(
       fetch('/api/sync/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ events: drillEvents }),
+        body: JSON.stringify({
+          events: groups.drillEvents.map((item) => item.payload),
+        }),
       }),
     );
   }
 
-  if (attendanceRecords.length > 0) {
+  if (groups.voids.length > 0) {
+    requests.push(
+      fetch('/api/sync/events/void', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          voids: groups.voids.map((item) => item.payload),
+        }),
+      }),
+    );
+  }
+
+  if (groups.attendance.length > 0) {
     requests.push(
       fetch('/api/sync/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ records: attendanceRecords }),
+        body: JSON.stringify({
+          records: groups.attendance.map((item) => item.payload),
+        }),
       }),
     );
   }
 
-
-  if (drillResults.length > 0) {
+  if (groups.drillResults.length > 0) {
     requests.push(
       fetch('/api/sync/results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ results: drillResults }),
+        body: JSON.stringify({
+          results: groups.drillResults.map((item) => item.payload),
+        }),
+      }),
+    );
+  }
+
+  for (const item of groups.sessionDrills) {
+    const payload = item.payload as {
+      id: string;
+      sessionId: string;
+      drillId: string;
+      stationId?: string;
+      target?: number;
+      trackMisses?: boolean;
+    };
+    requests.push(
+      fetch('/api/session-drills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
       }),
     );
   }

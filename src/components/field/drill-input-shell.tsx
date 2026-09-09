@@ -17,6 +17,7 @@ export function DrillInputShell({
   target,
   unit,
   lowerIsBetter,
+  trackMisses = false,
 }: {
   drillType: DrillType;
   sessionDrillId: string;
@@ -26,6 +27,7 @@ export function DrillInputShell({
   target?: number;
   unit?: string;
   lowerIsBetter?: boolean;
+  trackMisses?: boolean;
 }) {
   switch (drillType) {
     case 'timed':
@@ -78,6 +80,7 @@ export function DrillInputShell({
           recordedBy={recordedBy}
           drillName={drillName}
           target={target}
+          trackMisses={trackMisses}
         />
       );
   }

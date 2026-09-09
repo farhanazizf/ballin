@@ -84,9 +84,22 @@
 | 5–6 | 3 | 3 | **100%** |
 | 7–8 | 7 | 7 | **100%** |
 
-**Berikutnya:** Pilot prep — `pnpm db:push` migration 00006, seed dev, uji end-to-end di lapangan.
+**Berikutnya:** Pilot prep lapangan — `pnpm db:push` migration 00007, seed dev, uji jalur absensi + drill offline.
 
-**Migration:** `00006_box_scores_manage.sql` — jalankan `pnpm db:push`.
+**Migration:** `00007_drill_events_void.sql` — jalankan `pnpm db:push` (plus 00006 jika belum).
+
+---
+
+## Pilot prep P0
+
+| # | Task | Status | Catatan |
+|---|------|--------|---------|
+| P0-1 | Kartu input drill satu tangan + undo/DNP | [x] | `PlayerDrillCard` di-wire; DNP ≠ 0; Urungkan per kartu |
+| P0-2 | Void sync setelah undo | [x] | `/api/sync/events/void` + RLS update |
+| P0-3 | Drill bootstrap offline | [x] | Cache Dexie + `session_drills` lokal |
+| P0-4 | Absensi 5 status + cari nama | [x] | Hadir/Terlambat/Izin/Sakit/Alfa; scan duplikat "sudah absen" |
+| P0-5 | Kartu QR terbit + cetak | [x] | `/api/players/[id]/cards`, PDF QR ECC M |
+| P0-6 | Copy lapangan + i18n main | [x] | Rebase ke main i18n; field logic tetap |
 
 ---
 
@@ -94,6 +107,7 @@
 
 | Tanggal | Perubahan |
 |---------|-----------|
+| 2026-09-09 | Field P0: drill satu tangan, void sync, absensi 5 status, QR cetak (tanpa rapor) |
 | 2026-09-04 | Sprint 7–8 selesai: benchmark, rubrik, notes, match, rapor AI/PDF |
 | 2026-09-04 | Sprint 7–8 selesai: profil coach, dashboard alerts, player logout/refresh |
 | 2026-09-04 | Sprint 3–4 selesai: stations, input shells, Playwright offline gate |

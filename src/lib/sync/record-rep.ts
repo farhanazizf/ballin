@@ -1,5 +1,7 @@
 import { db } from '@/lib/db';
 import { enqueue } from './outbox';
+import { classifyUndoAction } from './undo-action';
+import { ensurePresentFromDrill } from './record-attendance';
 
 export interface RepInput {
   sessionDrillId: string;
@@ -58,6 +60,13 @@ export async function recordRep(input: RepInput) {
     });
   });
 
+  void ensurePresentFromDrill({
+    sessionDrillId: input.sessionDrillId,
+    playerId: input.playerId,
+    recordedBy: input.recordedBy,
+    result: input.result,
+  });
+
   return event;
 }
 
@@ -81,16 +90,14 @@ export async function undoLastRep(sessionDrillId: string, playerId: string) {
     .equals(events.clientEventId)
     .first();
 
-  if (outboxItem && outboxItem.status === 'pending') {
-    // Not yet sent — just delete locally
+  if (classifyUndoAction(outboxItem?.status) === 'delete') {
     await db.transaction('rw', db.localEvents, db.outbox, async () => {
       await db.localEvents.delete(events.clientEventId);
-      if (outboxItem.seq) {
+      if (outboxItem?.seq) {
         await db.outbox.delete(outboxItem.seq);
       }
     });
   } else {
-    // Already sent — mark as voided
     const voidedAt = new Date().toISOString();
     await db.localEvents.update(events.clientEventId, { voidedAt });
     await enqueue({

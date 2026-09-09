@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle, UserCircle, WarningCircle } from '@phosphor-icons/react';
+import { ArrowRight, CheckCircle, MagnifyingGlass, UserCircle, WarningCircle } from '@phosphor-icons/react';
 import { QrScanner } from '@/components/field/qr-scanner';
 import { cacheAttendanceSetup, loadCachedAttendanceSetup } from '@/lib/attendance/cache';
 import type { AttendanceSetupData, AttendanceSetupPlayer } from '@/lib/attendance/types';
-import { isPresentStatus } from '@/lib/attendance/qr';
+import {
+  attendanceStatusLabel,
+  isPresentStatus,
+  matchesPlayerSearch,
+  nextManualStatus,
+} from '@/lib/attendance/status';
+import { evaluateScan, scanFlashMessage } from '@/lib/attendance/evaluate-scan';
 import { cacheFieldBootstrap } from '@/lib/field/bootstrap';
 import { db } from '@/lib/db';
 import {
@@ -20,33 +26,16 @@ import { useTranslations } from '@/lib/i18n/use-translations';
 
 type Flash = { type: 'success' | 'error' | 'info'; message: string };
 
-const MANUAL_CYCLE: Array<AttendanceStatus | null> = [null, 'present', 'late', 'absent'];
-
-function nextManualStatus(current: AttendanceStatus | null): AttendanceStatus | null {
-  const index = MANUAL_CYCLE.indexOf(current);
-  const nextIndex = index === -1 ? 1 : (index + 1) % MANUAL_CYCLE.length;
-  return MANUAL_CYCLE[nextIndex] ?? null;
-}
-
-function statusLabel(status: AttendanceStatus | null, labels: { present: string; late: string; absent: string; notYet: string }): string {
-  switch (status) {
-    case 'present':
-      return labels.present;
-    case 'late':
-      return labels.late;
-    case 'absent':
-      return labels.absent;
-    default:
-      return labels.notYet;
-  }
-}
-
 function statusClass(status: AttendanceStatus | null): string {
   switch (status) {
     case 'present':
       return 'bg-[var(--color-made)]/15 text-[var(--color-made)] border-[var(--color-made)]/30';
     case 'late':
       return 'bg-[var(--color-gold)]/15 text-[var(--color-gold)] border-[var(--color-gold)]/30';
+    case 'excused':
+      return 'bg-[var(--color-leather)]/15 text-[var(--color-leather)] border-[var(--color-leather)]/30';
+    case 'sick':
+      return 'bg-[var(--color-field-text-3)]/20 text-[var(--color-field-text-2)] border-[var(--color-field-border)]';
     case 'absent':
       return 'bg-[var(--color-miss)]/15 text-[var(--color-miss)] border-[var(--color-miss)]/30';
     default:
@@ -67,18 +56,23 @@ export function AttendanceClient({
 }) {
   const { t } = useTranslations();
   const a = t.field.attendance;
-  const statusLabels = { present: t.common.present, late: t.common.late, absent: t.common.absent, notYet: t.common.notYet };
   const [roster, setRoster] = useState<AttendanceSetupPlayer[]>([]);
   const [flash, setFlash] = useState<Flash | null>(null);
   const [ready, setReady] = useState(false);
   const [offlineOnly, setOfflineOnly] = useState(false);
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const rosterMap = useMemo(() => new Map(roster.map((player) => [player.id, player])), [roster]);
 
   const presentCount = useMemo(
     () => roster.filter((player) => isPresentStatus(player.status)).length,
     [roster],
+  );
+
+  const visibleRoster = useMemo(
+    () => roster.filter((player) => matchesPlayerSearch(player, query)),
+    [query, roster],
   );
 
   const applySetup = useCallback((data: AttendanceSetupData, fromCache = false) => {
@@ -131,17 +125,22 @@ export function AttendanceClient({
                 sessionType: data.session.sessionType,
                 sessionDate,
               },
-              roster: (data.players as Array<{ id: string; nickname: string; fullName: string; jerseyNumber?: number | null }>).map(
-                (player) => ({
-                  id: player.id,
-                  nickname: player.nickname,
-                  fullName: player.fullName,
-                  jerseyNumber: player.jerseyNumber ?? null,
-                  hasCard: cardPlayerIds.has(player.id),
-                  status: attendanceMap.get(player.id)?.status ?? null,
-                  method: (attendanceMap.get(player.id)?.method as AttendanceSetupPlayer['method']) ?? null,
-                }),
-              ),
+              roster: (
+                data.players as Array<{
+                  id: string;
+                  nickname: string;
+                  fullName: string;
+                  jerseyNumber?: number | null;
+                }>
+              ).map((player) => ({
+                id: player.id,
+                nickname: player.nickname,
+                fullName: player.fullName,
+                jerseyNumber: player.jerseyNumber ?? null,
+                hasCard: cardPlayerIds.has(player.id),
+                status: attendanceMap.get(player.id)?.status ?? null,
+                method: (attendanceMap.get(player.id)?.method as AttendanceSetupPlayer['method']) ?? null,
+              })),
               cardTokens: data.cardTokens,
             });
             return;
@@ -172,15 +171,13 @@ export function AttendanceClient({
     }
 
     void load();
-  }, [applySetup, sessionDate, sessionId, teamName]);
+  }, [a.loadFailed, a.loadOffline, applySetup, sessionDate, sessionId, teamName]);
 
   const updatePlayer = useCallback(
     (playerId: string, status: AttendanceStatus | null, method: AttendanceSetupPlayer['method']) => {
       setRoster((current) =>
         current.map((player) =>
-          player.id === playerId
-            ? { ...player, status, method: status ? method : null }
-            : player,
+          player.id === playerId ? { ...player, status, method: status ? method : null } : player,
         ),
       );
     },
@@ -229,35 +226,26 @@ export function AttendanceClient({
         setSavingPlayerId(null);
       }
     },
-    [coachId, rosterMap, sessionDate, sessionId, updatePlayer],
+    [a.presentFlash, a.saveFailed, coachId, rosterMap, sessionDate, sessionId, updatePlayer],
   );
 
   const handleScan = useCallback(
     async (token: string) => {
       const card = await db.cardTokens.get(token);
-      if (!card) {
-        setFlash({
-          type: 'error',
-          message: a.cardUnknown,
-        });
+      const player = card ? rosterMap.get(card.playerId) : undefined;
+      const decision = evaluateScan({
+        card: card ? { playerId: card.playerId } : undefined,
+        player: player
+          ? { id: player.id, nickname: player.nickname, status: player.status }
+          : undefined,
+      });
+
+      if (decision.type !== 'mark_present') {
+        setFlash(scanFlashMessage(decision));
         return;
       }
 
-      const player = rosterMap.get(card.playerId);
-      if (!player) {
-        setFlash({ type: 'error', message: a.playerNotInTeam });
-        return;
-      }
-
-      if (isPresentStatus(player.status)) {
-        setFlash({
-          type: 'info',
-          message: a.alreadyRecorded.replace('{name}', player.nickname).replace('{status}', statusLabel(player.status, statusLabels).toLowerCase()),
-        });
-        return;
-      }
-
-      await saveStatus(player.id, 'present', 'qr');
+      await saveStatus(decision.playerId, 'present', 'qr');
     },
     [rosterMap, saveStatus],
   );
@@ -266,17 +254,7 @@ export function AttendanceClient({
     async (playerId: string) => {
       const player = rosterMap.get(playerId);
       if (!player) return;
-
-      const nextStatus = nextManualStatus(player.status);
-      if (!nextStatus) {
-        setFlash({
-          type: 'info',
-          message: a.removeHint,
-        });
-        return;
-      }
-
-      await saveStatus(playerId, nextStatus, 'manual');
+      await saveStatus(playerId, nextManualStatus(player.status), 'manual');
     },
     [rosterMap, saveStatus],
   );
@@ -284,10 +262,6 @@ export function AttendanceClient({
   const handleScanError = useCallback((message: string) => {
     setFlash({ type: 'error', message });
   }, []);
-
-  const manualPlayers = roster.filter(
-    (player) => !player.hasCard || !isPresentStatus(player.status),
-  );
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -343,20 +317,34 @@ export function AttendanceClient({
         <section className="space-y-3">
           <div>
             <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold">
-              {a.noCardSection}
+              {a.rosterSection}
             </h2>
             <p className="mt-1 text-sm text-[var(--color-field-text-3)]">
-              {a.noCardHint}
+              {a.rosterHint}
             </p>
           </div>
 
-          {manualPlayers.length === 0 ? (
+          <label className="relative block">
+            <MagnifyingGlass
+              size={18}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-field-text-3)]"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={a.searchPlaceholder}
+              className="h-12 w-full border border-[var(--color-field-border)] bg-[var(--color-field-surface)] pl-10 pr-3 text-sm text-[var(--color-field-text)]"
+            />
+          </label>
+
+          {visibleRoster.length === 0 ? (
             <div className="rounded-[var(--radius-card)] border border-[var(--color-field-border)] bg-[var(--color-field-surface)] px-4 py-6 text-center text-sm text-[var(--color-field-text-2)]">
-              {a.allRecorded}
+              {roster.length === 0 ? a.rosterEmpty : a.noSearchMatch}
             </div>
           ) : (
             <ul className="space-y-2">
-              {manualPlayers.map((player) => (
+              {visibleRoster.map((player) => (
                 <li key={player.id}>
                   <button
                     type="button"
@@ -389,7 +377,7 @@ export function AttendanceClient({
                         statusClass(player.status),
                       )}
                     >
-                      {statusLabel(player.status, statusLabels)}
+                      {attendanceStatusLabel(player.status)}
                     </span>
                   </button>
                 </li>

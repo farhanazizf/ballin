@@ -14,6 +14,7 @@ export interface PlayerDrillCardProps {
   initialMade: number;
   initialAttempts: number;
   initialDnp: boolean;
+  onRecorded?: (playerId: string) => void;
 }
 
 const LONG_PRESS_MS = 500;
@@ -33,6 +34,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
   initialMade,
   initialAttempts,
   initialDnp,
+  onRecorded,
 }: PlayerDrillCardProps) {
   const [made, setMade] = useState(initialMade);
   const [attempts, setAttempts] = useState(initialAttempts);
@@ -59,6 +61,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
     setMade((m) => m + 1);
     setAttempts((a) => a + 1);
     triggerFlash('made');
+    onRecorded?.(playerId);
 
     void recordRep({
       sessionDrillId,
@@ -66,13 +69,14 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
       result: 'made',
       recordedBy,
     });
-  }, [isDnp, playerId, recordedBy, sessionDrillId, triggerFlash]);
+  }, [isDnp, onRecorded, playerId, recordedBy, sessionDrillId, triggerFlash]);
 
   const handleMiss = useCallback(() => {
     if (isDnp) return;
 
     setAttempts((a) => a + 1);
     triggerFlash('miss');
+    onRecorded?.(playerId);
 
     void recordRep({
       sessionDrillId,
@@ -80,7 +84,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
       result: 'miss',
       recordedBy,
     });
-  }, [isDnp, playerId, recordedBy, sessionDrillId, triggerFlash]);
+  }, [isDnp, onRecorded, playerId, recordedBy, sessionDrillId, triggerFlash]);
 
   const handleUndo = useCallback(async () => {
     const undone = await undoLastRep(sessionDrillId, playerId);
@@ -106,6 +110,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
 
     setIsDnp(true);
     vibrate();
+    onRecorded?.(playerId);
 
     void recordRep({
       sessionDrillId,
@@ -113,7 +118,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
       result: 'dnp',
       recordedBy,
     });
-  }, [handleUndo, isDnp, playerId, recordedBy, sessionDrillId]);
+  }, [handleUndo, isDnp, onRecorded, playerId, recordedBy, sessionDrillId]);
 
   const clearLongPress = useCallback(() => {
     if (longPressRef.current) {
@@ -144,7 +149,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
       className={cn(
         'relative flex min-h-[var(--size-touch-card)] flex-col overflow-hidden rounded-[var(--radius-card)] border',
         'bg-[var(--color-field-surface)] border-[var(--color-field-border)]',
-        isDnp && 'opacity-60'
+        isDnp && 'opacity-60',
       )}
       aria-label={`${nickname}, ${made} dari ${attempts}${isDnp ? ', tidak ikut' : ''}`}
     >
@@ -155,6 +160,7 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
         <button
           type="button"
           onClick={() => void toggleDnp()}
+          data-testid={`drill-dnp-${playerId}`}
           aria-pressed={isDnp}
           className={cn(
             'shrink-0 rounded-[var(--radius-chip)] px-2 py-0.5',
@@ -162,25 +168,24 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
             'min-h-[var(--size-touch-min)] min-w-[var(--size-touch-min)]',
             isDnp
               ? 'bg-[var(--color-field-text-3)] text-[var(--color-field-bg)]'
-              : 'bg-[var(--color-field-raised)] text-[var(--color-field-text-3)]'
+              : 'bg-[var(--color-field-raised)] text-[var(--color-field-text-3)]',
           )}
         >
-          {isDnp ? 'DNP' : '–'}
+          Tidak ikut
         </button>
       </div>
 
       <div
         className={cn(
           'flex flex-1 items-center justify-center px-2',
-          pulse && 'scale-105 transition-transform duration-120'
+          pulse && 'scale-105 transition-transform duration-120',
         )}
       >
         <span
+          data-testid={`drill-count-${playerId}`}
           className={cn(
             'font-[family-name:var(--font-display)] tabular-nums text-[28px] font-semibold leading-none',
-            isDnp
-              ? 'text-[var(--color-field-text-3)]'
-              : 'text-[var(--color-field-text)]'
+            isDnp ? 'text-[var(--color-field-text-3)]' : 'text-[var(--color-field-text)]',
           )}
         >
           {isDnp ? '–' : `${made}/${attempts}`}
@@ -194,12 +199,13 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
               <button
                 type="button"
                 onClick={handleMade}
-                aria-label={`${nickname} made`}
+                data-testid={`drill-made-${playerId}`}
+                aria-label={`${nickname} masuk`}
                 className={cn(
                   'flex flex-[3] items-center justify-center',
                   'font-[family-name:var(--font-ui)] text-sm font-semibold',
                   'text-[var(--color-made)] active:bg-[var(--color-made)]/15',
-                  flash === 'made' && 'bg-[var(--color-made)]/25'
+                  flash === 'made' && 'bg-[var(--color-made)]/25',
                 )}
               >
                 ✓
@@ -207,12 +213,13 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
               <button
                 type="button"
                 onClick={handleMiss}
-                aria-label={`${nickname} miss`}
+                data-testid={`drill-miss-${playerId}`}
+                aria-label={`${nickname} meleset`}
                 className={cn(
                   'flex flex-[2] items-center justify-center border-l border-[var(--color-field-border)]',
                   'font-[family-name:var(--font-ui)] text-sm font-semibold',
                   'text-[var(--color-miss)] active:bg-[var(--color-miss)]/15',
-                  flash === 'miss' && 'bg-[var(--color-miss)]/25'
+                  flash === 'miss' && 'bg-[var(--color-miss)]/25',
                 )}
               >
                 ✗
@@ -225,13 +232,14 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
               onPointerUp={onMadePointerUp}
               onPointerLeave={clearLongPress}
               onPointerCancel={clearLongPress}
-              aria-label={`${nickname} tap made, tahan untuk miss`}
+              data-testid={`drill-made-${playerId}`}
+              aria-label={`${nickname} ketuk masuk, tahan untuk meleset`}
               className={cn(
                 'flex flex-1 items-center justify-center',
                 'font-[family-name:var(--font-ui)] text-sm font-medium text-[var(--color-field-text-2)]',
                 'active:bg-[var(--color-field-raised)]',
                 flash === 'made' && 'bg-[var(--color-made)]/25 text-[var(--color-made)]',
-                flash === 'miss' && 'bg-[var(--color-miss)]/25 text-[var(--color-miss)]'
+                flash === 'miss' && 'bg-[var(--color-miss)]/25 text-[var(--color-miss)]',
               )}
             >
               Ketuk +1
@@ -243,13 +251,14 @@ export const PlayerDrillCard = memo(function PlayerDrillCard({
       <button
         type="button"
         onClick={() => void handleUndo()}
+        data-testid={`drill-undo-${playerId}`}
         aria-label={`Urungkan rep terakhir ${nickname}`}
         className={cn(
           'absolute bottom-[calc(var(--size-touch-primary)+4px)] right-1',
           'flex h-[var(--size-touch-min)] w-[var(--size-touch-min)] items-center justify-center',
           'rounded-[var(--radius-panel)] bg-[var(--color-field-raised)]/90',
           'text-[var(--color-field-text-2)] active:bg-[var(--color-field-border)]',
-          isDnp && 'bottom-2'
+          isDnp && 'bottom-2',
         )}
       >
         <ArrowUUpLeft size={18} weight="bold" aria-hidden />

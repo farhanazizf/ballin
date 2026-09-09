@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import { Document, Image, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import QRCode from 'qrcode';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const QR_PREFIX = 'BLN1:';
@@ -13,13 +14,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 12,
     marginBottom: 12,
+    minHeight: 180,
   },
   name: { fontSize: 14, fontWeight: 'bold', marginBottom: 4 },
   meta: { fontSize: 10, color: '#555', marginBottom: 6 },
-  qr: { fontSize: 9, fontFamily: 'Courier', backgroundColor: '#f5f5f5', padding: 6 },
+  qr: { width: 80, height: 80, marginTop: 4 },
+  token: { fontSize: 7, color: '#777', marginTop: 4 },
 });
 
-type CardRow = { nickname: string; jerseyNumber: number | null; token: string };
+type CardRow = { nickname: string; jerseyNumber: number | null; token: string; qrDataUrl: string };
 
 function buildDocument(cards: CardRow[]) {
   return React.createElement(
@@ -38,7 +41,8 @@ function buildDocument(cards: CardRow[]) {
             { style: styles.meta },
             card.jerseyNumber != null ? `#${card.jerseyNumber}` : 'Tanpa nomor',
           ),
-          React.createElement(Text, { style: styles.qr }, `${QR_PREFIX}${card.token}`),
+          React.createElement(Image, { src: card.qrDataUrl, style: styles.qr }),
+          React.createElement(Text, { style: styles.token }, `${QR_PREFIX}${card.token}`),
         ),
       ),
     ),
@@ -81,7 +85,7 @@ export async function GET(request: NextRequest) {
 
   type Row = { token: string; players: { nickname: string; jersey_number: number | null } | null };
 
-  const cards = ((rows ?? []) as Row[])
+  const baseCards = ((rows ?? []) as Row[])
     .filter((r) => r.players)
     .map((r) => ({
       nickname: r.players!.nickname,
@@ -89,12 +93,23 @@ export async function GET(request: NextRequest) {
       token: r.token,
     }));
 
-  if (cards.length === 0) {
+  if (baseCards.length === 0) {
     return NextResponse.json(
-      { error: 'Tidak ada kartu aktif. Buat kartu pemain dulu lewat admin.' },
+      { error: 'Tidak ada kartu aktif. Terbitkan kartu pemain dulu, lalu cetak.' },
       { status: 404 },
     );
   }
+
+  const cards: CardRow[] = await Promise.all(
+    baseCards.map(async (card) => ({
+      ...card,
+      qrDataUrl: await QRCode.toDataURL(`${QR_PREFIX}${card.token}`, {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 256,
+      }),
+    })),
+  );
 
   const buffer = await renderToBuffer(buildDocument(cards));
 

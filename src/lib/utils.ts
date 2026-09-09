@@ -27,16 +27,18 @@ export function formatDate(date: string | Date): string {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Asia/Jakarta',
   }).format(new Date(date));
 }
 
 /**
- * Format time to HH:MM
+ * Format time to HH:MM (WIB)
  */
 export function formatTime(date: string | Date): string {
   return new Intl.DateTimeFormat('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: 'Asia/Jakarta',
   }).format(new Date(date));
 }

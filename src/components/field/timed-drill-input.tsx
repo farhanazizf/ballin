@@ -105,7 +105,7 @@ export function TimedDrillInput({
           </p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void handleUndo()} disabled={!lastPlayerId}>
-          Undo
+          Urungkan
         </Button>
       </header>
 
@@ -118,7 +118,7 @@ export function TimedDrillInput({
             </Button>
           ) : (
             <Button variant="secondary" className="flex-1" onClick={stopTimer}>
-              Stop timer
+              Hentikan timer
             </Button>
           )}
         </div>

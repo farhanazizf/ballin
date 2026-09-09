@@ -66,7 +66,7 @@ export function MeasureDrillInput({
           {unit && <p className="text-sm text-[var(--color-field-text-3)]">Satuan: {unit}</p>}
         </div>
         <Button variant="secondary" size="sm" onClick={() => void handleUndo()} disabled={!lastPlayerId}>
-          Undo
+          Urungkan
         </Button>
       </header>
 
