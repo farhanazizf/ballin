@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;900&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1080px; height: 1080px; overflow: hidden;
+      font-family: "Instrument Sans", system-ui, sans-serif;
+      background: #F4F4F0; color: #050505;
+      position: relative;
+    }
+    .scanlines {
+      position: absolute; inset: 0; pointer-events: none; z-index: 20;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.018) 2px, rgba(255,255,255,0.018) 3px);
+    }
+    .frame { position: relative; z-index: 5; height: 100%; display: flex; flex-direction: column; border: 2px solid #111111; }
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid #111111; padding: 20px 28px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .top-bar .hazard { color: #E61919; }
+    .top-bar .unit { color: #333333; }
+    .head { padding: 32px 28px 24px; border-bottom: 1px solid #111111; }
+    .head h1 {
+      font-family: "Archivo", system-ui, sans-serif;
+      font-weight: 900; font-size: 42px;
+      letter-spacing: -0.04em; line-height: 0.92;
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+    .head .sub {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #EE6A1E; margin-bottom: 16px;
+    }
+    .head .body { font-size: 18px; line-height: 1.45; color: #333333; max-width: 92%; }
+    .shots {
+      flex: 1; display: flex; gap: 16px; padding: 24px 28px;
+      align-items: center; justify-content: center; min-height: 0;
+    }
+    .shots.single .phone { max-width: 72%; }
+    .shots.dual .phone { max-width: 46%; }
+    .phone {
+      border: 2px solid #111111;
+      background: #F4F4F0;
+      box-shadow: 8px 8px 0 #111111;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .phone img { display: block; width: 100%; height: auto; vertical-align: top; }
+    .footer {
+      border-top: 2px solid #111111;
+      padding: 20px 28px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .footer .brand { font-weight: 600; color: #050505; }
+    .footer .tag { color: #EE6A1E; }
+    .corner-mark {
+      position: absolute; bottom: 12px; right: 16px; z-index: 6;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 9px; letter-spacing: 0.1em; color: #333333; opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="frame">
+    <div class="top-bar">
+      <span class="hazard">[ Ballin / Coach ]</span>
+      <span class="unit">UNIT / 08 · REV 1.0</span>
+    </div>
+    <div class="head">
+      <p class="sub">Tren drill, absensi, atribut</p>
+      <h1>Profil pemain lengkap</h1>
+      <p class="body">Coach lihat riwayat latihan dan grafik perkembangan per anak — tanpa peringkat antar pemain.</p>
+    </div>
+    <div class="shots dual"><div class="phone"><img src="../screenshots/08-profil.png" alt="" /></div><div class="phone"><img src="../screenshots/08-profil-detail.png" alt="" /></div></div>
+    <div class="footer">
+      <span class="brand">Dynasty Basketball Academy · Karawang</span>
+      <span class="tag">#BerprosesBersama</span>
+    </div>
+  </div>
+  <div class="corner-mark">BALLIN · 1:1</div>
+</body>
+</html>
