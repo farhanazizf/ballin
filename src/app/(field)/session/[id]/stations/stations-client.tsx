@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowsClockwise, Barbell, GearSix, UsersThree } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import { cacheFieldBootstrap } from '@/lib/field/bootstrap';
+import { cacheFieldBootstrap, loadCachedFieldBootstrap } from '@/lib/field/bootstrap';
 import {
   defaultStationLabels,
   rotateStationAssignments,
@@ -33,19 +33,43 @@ export function StationsClient({ sessionId, teamName }: { sessionId: string; tea
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/field/bootstrap?sessionId=${sessionId}`, { credentials: 'include' });
-    if (!res.ok) return;
-    const data = await res.json();
-    await cacheFieldBootstrap(data);
-    setDrills(data.drills.map((d: DrillRow) => ({ id: d.id, name: d.name, category: d.category })));
-    setPlayers(data.players);
-    setStations(data.stations ?? []);
-    const stored = localStorage.getItem(ACTIVE_STATION_KEY(sessionId));
-    if (stored && (data.stations ?? []).some((s: StationRow) => s.id === stored)) {
-      setActiveStationId(stored);
-    } else if ((data.stations ?? []).length === 1) {
-      setActiveStationId(data.stations[0].id);
+    try {
+      const res = await fetch(`/api/field/bootstrap?sessionId=${sessionId}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        await cacheFieldBootstrap(data);
+        setDrills(data.drills.map((d: DrillRow) => ({ id: d.id, name: d.name, category: d.category })));
+        setPlayers(data.players);
+        setStations(data.stations ?? []);
+        const stored = localStorage.getItem(ACTIVE_STATION_KEY(sessionId));
+        if (stored && (data.stations ?? []).some((s: StationRow) => s.id === stored)) {
+          setActiveStationId(stored);
+        } else if ((data.stations ?? []).length === 1) {
+          setActiveStationId(data.stations[0].id);
+        }
+        setError(null);
+        return;
+      }
+    } catch {
+      // Fall back to Dexie when the GOR has no signal.
     }
+
+    const cached = await loadCachedFieldBootstrap(sessionId);
+    if (cached) {
+      setDrills(cached.drills.map((d) => ({ id: d.id, name: d.name, category: d.category })));
+      setPlayers(cached.players);
+      setStations(cached.stations ?? []);
+      const stored = localStorage.getItem(ACTIVE_STATION_KEY(sessionId));
+      if (stored && (cached.stations ?? []).some((s) => s.id === stored)) {
+        setActiveStationId(stored);
+      } else if ((cached.stations ?? []).length === 1) {
+        setActiveStationId(cached.stations[0].id);
+      }
+      setError(null);
+      return;
+    }
+
+    setError('Data pos belum tersimpan di HP. Sambungkan internet lalu buka halaman ini sekali.');
   }, [sessionId]);
 
   useEffect(() => {

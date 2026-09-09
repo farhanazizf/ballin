@@ -1,4 +1,5 @@
 import { db, type LocalAttendance } from '@/lib/db';
+import { staleCardTokens } from '@/lib/attendance/tokens';
 
 export type FieldBootstrapPayload = {
   session: {
@@ -94,6 +95,13 @@ export async function cacheFieldBootstrap(data: FieldBootstrapPayload) {
         await db.cardTokens.put(card);
       }
 
+      const rosterIds = data.players.map((player) => player.id);
+      const existingTokens = await db.cardTokens.toArray();
+      const stale = staleCardTokens(existingTokens, data.cardTokens, rosterIds);
+      if (stale.length > 0) {
+        await db.cardTokens.bulkDelete(stale);
+      }
+
       for (const drill of data.drills) {
         await db.drills.put({
           id: drill.id,
@@ -158,4 +166,78 @@ export async function cacheFieldBootstrap(data: FieldBootstrapPayload) {
       }
     },
   );
+}
+
+export async function loadCachedFieldBootstrap(sessionId: string): Promise<FieldBootstrapPayload | null> {
+  const session = await db.sessions.get(sessionId);
+  if (!session) return null;
+
+  const players = await db.players.where('teamIds').equals(session.teamId).toArray();
+  const drills = await db.drills.toArray();
+  if (players.length === 0 || drills.length === 0) return null;
+
+  const sessionDrills = await db.sessionDrills.where('sessionId').equals(sessionId).toArray();
+  const stations = await db.stations.where('sessionId').equals(sessionId).toArray();
+  const stationIds = stations.map((station) => station.id);
+  const stationPlayerRows =
+    stationIds.length > 0 ? await db.stationPlayers.where('stationId').anyOf(stationIds).toArray() : [];
+  const cardTokens = await db.cardTokens.toArray();
+  const attendance = await db.localAttendance.where('sessionId').equals(sessionId).toArray();
+  const rosterIds = new Set(players.map((player) => player.id));
+
+  return {
+    session: {
+      id: session.id,
+      teamId: session.teamId,
+      status: session.status,
+      scheduledStart: session.scheduledStart,
+      scheduledEnd: session.scheduledEnd,
+      location: session.location,
+      sessionType: session.sessionType,
+    },
+    players: players.map((player) => ({
+      id: player.id,
+      nickname: player.nickname,
+      fullName: player.fullName,
+      jerseyNumber: player.jerseyNumber ?? null,
+      teamIds: player.teamIds,
+    })),
+    cardTokens: cardTokens.filter((card) => rosterIds.has(card.playerId)),
+    drills: drills.map((drill) => ({
+      id: drill.id,
+      name: drill.name,
+      category: drill.category,
+      type: drill.type,
+      defaultTarget: drill.defaultTarget,
+      unit: drill.unit,
+      lowerIsBetter: drill.lowerIsBetter,
+      attributeWeights: drill.attributeWeights,
+      instructions: drill.instructions,
+    })),
+    sessionDrills: sessionDrills.map((row) => ({
+      id: row.id,
+      sessionId: row.sessionId,
+      stationId: row.stationId,
+      drillId: row.drillId,
+      target: row.target,
+      trackMisses: row.trackMisses,
+      startedAt: row.startedAt,
+    })),
+    stations: stations.map((station) => ({
+      id: station.id,
+      label: station.label,
+      coachId: station.coachId,
+      sortOrder: station.sortOrder,
+      playerIds: stationPlayerRows
+        .filter((row) => row.stationId === station.id)
+        .map((row) => row.playerId),
+    })),
+    attendance: attendance.map((row) => ({
+      playerId: row.playerId,
+      status: row.status,
+      sessionDate: row.sessionDate,
+      method: row.method,
+      checkedInAt: row.checkedInAt,
+    })),
+  };
 }

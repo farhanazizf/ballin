@@ -20,6 +20,7 @@ import {
 import { formatDate, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { getServerMessages } from '@/lib/i18n/server';
+import { PlayerQrCardActions } from './player-qr-card-actions';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -65,6 +66,7 @@ function attendanceStatusLabel(status: string, d: Awaited<ReturnType<typeof getS
 function attendanceDotClass(status: string): string {
   if (status === 'present') return 'bg-[var(--color-made)]';
   if (status === 'late') return 'bg-[var(--color-gold)]';
+  if (status === 'excused' || status === 'sick') return 'bg-[var(--color-leather)]';
   if (status === 'absent') return 'bg-[var(--color-miss)]';
   return 'bg-[var(--color-report-border)]';
 }
@@ -284,6 +286,8 @@ export default async function PlayerDetailPage({ params }: PageProps) {
           </dl>
         </section>
       ) : null}
+
+      <PlayerQrCardActions playerId={player.id} />
 
       <section className={cn(cardClass, 'mb-4')}>
         <div className="flex items-center gap-2 mb-4">

@@ -43,6 +43,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      if (error.code === '23505') {
+        return NextResponse.json(
+          {
+            error:
+              'Pemain ini sudah tercatat hadir di sesi lain hari ini. Cek jadwal atau ubah status jadi izin/sakit/alfa.',
+          },
+          { status: 409 },
+        );
+      }
       return NextResponse.json({ error: 'Gagal menyimpan absensi.' }, { status: 500 });
     }
 

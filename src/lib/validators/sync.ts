@@ -30,8 +30,18 @@ export const syncAttendanceBatchSchema = z.object({
   records: z.array(syncAttendanceSchema).min(1).max(50),
 });
 
+export const syncVoidEventSchema = z.object({
+  targetClientEventId: z.string().uuid(),
+  voidedAt: z.iso.datetime(),
+});
+
+export const syncVoidEventsBatchSchema = z.object({
+  voids: z.array(syncVoidEventSchema).min(1).max(50),
+});
+
 export type SyncEvent = z.infer<typeof syncEventSchema>;
 export type SyncAttendance = z.infer<typeof syncAttendanceSchema>;
+export type SyncVoidEvent = z.infer<typeof syncVoidEventSchema>;
 
 export const syncResultSchema = z
   .object({
@@ -42,7 +52,7 @@ export const syncResultSchema = z
     isDnp: z.boolean(),
   })
   .refine((data) => data.isDnp || data.attempts >= data.made, {
-    message: 'Made tidak boleh lebih besar dari attempts',
+    message: 'Masuk tidak boleh lebih besar dari percobaan',
     path: ['made'],
   });
 

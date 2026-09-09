@@ -61,7 +61,7 @@ export function RatingDrillInput({
           <p className="text-sm text-[var(--color-field-text-3)]">Skala 1–5</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void handleUndo()} disabled={!lastPlayerId}>
-          Undo
+          Urungkan
         </Button>
       </header>
 

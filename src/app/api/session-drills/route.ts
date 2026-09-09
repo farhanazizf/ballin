@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { idSchema } from '@/lib/validators/id';
 
 const bodySchema = z.object({
+  id: idSchema.optional(),
   sessionId: idSchema,
   drillId: idSchema,
   stationId: idSchema.optional(),
@@ -26,31 +27,52 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Data drill sesi tidak valid.' }, { status: 400 });
   }
 
-  const { sessionId, drillId, stationId, target, trackMisses } = parsed.data;
+  const { id, sessionId, drillId, stationId, target, trackMisses } = parsed.data;
 
-  let existingQuery = supabase
-    .from('session_drills')
-    .select('id, session_id, drill_id, station_id, target, track_misses, started_at')
-    .eq('session_id', sessionId)
-    .eq('drill_id', drillId);
+  if (id) {
+    const { data: byId } = await supabase
+      .from('session_drills')
+      .select('id, session_id, drill_id, station_id, target, track_misses, started_at')
+      .eq('id', id)
+      .maybeSingle();
 
-  if (stationId) {
-    existingQuery = existingQuery.eq('station_id', stationId);
-  } else {
-    existingQuery = existingQuery.is('station_id', null);
+    if (byId) {
+      return NextResponse.json({
+        id: byId.id,
+        sessionId: byId.session_id,
+        drillId: byId.drill_id,
+        target: byId.target,
+        trackMisses: byId.track_misses,
+        startedAt: byId.started_at,
+      });
+    }
   }
 
-  const { data: existing } = await existingQuery.maybeSingle();
+  if (!id) {
+    let existingQuery = supabase
+      .from('session_drills')
+      .select('id, session_id, drill_id, station_id, target, track_misses, started_at')
+      .eq('session_id', sessionId)
+      .eq('drill_id', drillId);
 
-  if (existing) {
-    return NextResponse.json({
-      id: existing.id,
-      sessionId: existing.session_id,
-      drillId: existing.drill_id,
-      target: existing.target,
-      trackMisses: existing.track_misses,
-      startedAt: existing.started_at,
-    });
+    if (stationId) {
+      existingQuery = existingQuery.eq('station_id', stationId);
+    } else {
+      existingQuery = existingQuery.is('station_id', null);
+    }
+
+    const { data: existing } = await existingQuery.maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({
+        id: existing.id,
+        sessionId: existing.session_id,
+        drillId: existing.drill_id,
+        target: existing.target,
+        trackMisses: existing.track_misses,
+        startedAt: existing.started_at,
+      });
+    }
   }
 
   const { data: drill } = await supabase
@@ -62,11 +84,12 @@ export async function POST(request: NextRequest) {
   const { data: created, error } = await supabase
     .from('session_drills')
     .insert({
+      ...(id ? { id } : {}),
       session_id: sessionId,
       station_id: stationId ?? null,
       drill_id: drillId,
       target: target ?? drill?.default_target ?? null,
-      track_misses: trackMisses ?? true,
+      track_misses: trackMisses ?? false,
       created_by: user.id,
     })
     .select('id, session_id, station_id, drill_id, target, track_misses, started_at')

@@ -18,6 +18,4 @@ export function parseQrPayload(raw: string): QrParseResult {
   return { ok: true, token };
 }
 
-export function isPresentStatus(status: string | null | undefined): boolean {
-  return status === 'present' || status === 'late';
-}
+export { isPresentStatus } from '@/lib/attendance/status';

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import type { AttendanceSetupData } from '@/lib/attendance/types';
+import { staleCardTokens } from '@/lib/attendance/tokens';
 
 export async function cacheAttendanceSetup(data: AttendanceSetupData): Promise<void> {
   await db.sessions.put({
@@ -32,6 +33,16 @@ export async function cacheAttendanceSetup(data: AttendanceSetupData): Promise<v
         issuedAt: card.issuedAt,
       })),
     );
+  }
+
+  const existingTokens = await db.cardTokens.toArray();
+  const stale = staleCardTokens(
+    existingTokens,
+    data.cardTokens,
+    data.roster.map((player) => player.id),
+  );
+  if (stale.length > 0) {
+    await db.cardTokens.bulkDelete(stale);
   }
 
   await db.localAttendance.bulkPut(
